@@ -56,56 +56,15 @@ func ListarFacturas(c *gin.Context, db *storage.DB) {
 	defer rows.Close()
 
 	// Loop through the rows and decode each row into a Factura struct
+
 	var facturas []models.Factura
 	for rows.Next() {
 		var factura models.Factura
 		var serviciosJSON []byte
-		var nombreEmpresa sql.NullString
-		var NITEmpresa sql.NullString
-		var nombreOperador sql.NullString
-		var tipoDocumentoOperador sql.NullString
-		var documentoOperador sql.NullString
-		var ciudadExpedicionDocumentoOperador sql.NullString
-		var celularOperador sql.NullString
-		var numeroCuentaBancariaOperador sql.NullString
-		var tipoCuentaBancariaOperador sql.NullString
-		var bancoOperador sql.NullString
-
-		err := rows.Scan(&factura.ID, &nombreEmpresa, &NITEmpresa, &factura.Fecha, &serviciosJSON, &factura.ValorTotal, &nombreOperador, &tipoDocumentoOperador, &documentoOperador, &ciudadExpedicionDocumentoOperador, &celularOperador, &numeroCuentaBancariaOperador, &tipoCuentaBancariaOperador, &bancoOperador)
+		err := rows.Scan(&factura.ID, &factura.Empresa.Nombre, &factura.Empresa.NIT, &factura.Fecha, &serviciosJSON, &factura.ValorTotal, &factura.Operador.Nombre, &factura.Operador.TipoDocumento, &factura.Operador.Documento, &factura.Operador.CiudadExpedicionDocumento, &factura.Operador.Celular, &factura.Operador.NumeroCuentaBancaria, &factura.Operador.TipoCuentaBancaria, &factura.Operador.Banco)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
-		}
-
-		if nombreEmpresa.Valid {
-			factura.NombreEmpresa = nombreEmpresa.String
-		}
-		if NITEmpresa.Valid {
-			factura.NITEmpresa = NITEmpresa.String
-		}
-		if nombreOperador.Valid {
-			factura.NombreOperador = nombreOperador.String
-		}
-		if tipoDocumentoOperador.Valid {
-			factura.TipoDocumentoOperador = tipoDocumentoOperador.String
-		}
-		if documentoOperador.Valid {
-			factura.DocumentoOperador = documentoOperador.String
-		}
-		if ciudadExpedicionDocumentoOperador.Valid {
-			factura.CiudadExpedicionDocumentoOperador = ciudadExpedicionDocumentoOperador.String
-		}
-		if celularOperador.Valid {
-			factura.CelularOperador = celularOperador.String
-		}
-		if numeroCuentaBancariaOperador.Valid {
-			factura.NumeroCuentaBancariaOperador = numeroCuentaBancariaOperador.String
-		}
-		if tipoCuentaBancariaOperador.Valid {
-			factura.TipoCuentaBancariaOperador = tipoCuentaBancariaOperador.String
-		}
-		if bancoOperador.Valid {
-			factura.BancoOperador = bancoOperador.String
 		}
 
 		err = json.Unmarshal(serviciosJSON, &factura.Servicios)
@@ -113,7 +72,6 @@ func ListarFacturas(c *gin.Context, db *storage.DB) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-
 		facturas = append(facturas, factura)
 	}
 
@@ -138,7 +96,6 @@ func ListarFacturas(c *gin.Context, db *storage.DB) {
 			"page":        page,
 		})
 	}
-
 }
 
 func CrearFactura(c *gin.Context, db *storage.DB) {
@@ -159,7 +116,7 @@ func CrearFactura(c *gin.Context, db *storage.DB) {
 
 	// Guarda la factura en la base de datos y recupera el ID generado
 	query := `INSERT INTO facturas (nombre_empresa, nit_empresa, fecha, servicios, valor_total, nombre_operador, tipo_documento_operador, documento_operador, ciudad_expedicion_documento_operador, celular_operador, numero_cuenta_bancaria_operador, tipo_cuenta_bancaria_operador, banco_operador) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`
-	err = db.QueryRow(query, factura.NombreEmpresa, factura.NITEmpresa, factura.Fecha, serviciosJSON, factura.ValorTotal, factura.NombreOperador, factura.TipoDocumentoOperador, factura.DocumentoOperador, factura.CiudadExpedicionDocumentoOperador, factura.CelularOperador, factura.NumeroCuentaBancariaOperador, factura.TipoCuentaBancariaOperador, factura.BancoOperador).Scan(&factura.ID)
+	err = db.QueryRow(query, factura.Empresa.Nombre, factura.Empresa.NIT, factura.Fecha, serviciosJSON, factura.ValorTotal, factura.Operador.Nombre, factura.Operador.TipoDocumento, factura.Operador.Documento, factura.Operador.CiudadExpedicionDocumento, factura.Operador.Celular, factura.Operador.NumeroCuentaBancaria, factura.Operador.TipoCuentaBancaria, factura.Operador.Banco).Scan(&factura.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -198,7 +155,7 @@ func ActualizarFactura(c *gin.Context, db *storage.DB) {
     numero_cuenta_bancaria_operador = $11,
     tipo_cuenta_bancaria_operador = $12,
     banco_operador = $13 WHERE id = $14`
-	result, err := db.Exec(query, factura.NombreEmpresa, factura.NITEmpresa, factura.Fecha, serviciosJSON, factura.ValorTotal, factura.NombreOperador, factura.TipoDocumentoOperador, factura.DocumentoOperador, factura.CiudadExpedicionDocumentoOperador, factura.CelularOperador, factura.NumeroCuentaBancariaOperador, factura.TipoCuentaBancariaOperador, factura.BancoOperador, id)
+	result, err := db.Exec(query, factura.Empresa.Nombre, factura.Empresa.NIT, factura.Fecha, serviciosJSON, factura.ValorTotal, factura.Operador.Nombre, factura.Operador.TipoDocumento, factura.Operador.Documento, factura.Operador.CiudadExpedicionDocumento, factura.Operador.Celular, factura.Operador.NumeroCuentaBancaria, factura.Operador.TipoCuentaBancaria, factura.Operador.Banco, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -242,18 +199,8 @@ func GenerarPDF(c *gin.Context, db *storage.DB) {
 	// Decodificar la fila en una estructura Factura
 	var factura models.Factura
 	var serviciosJSON []byte
-	var nombreEmpresa sql.NullString
-	var NITEmpresa sql.NullString
-	var nombreOperador sql.NullString
-	var tipoDocumentoOperador sql.NullString
-	var documentoOperador sql.NullString
-	var ciudadExpedicionDocumentoOperador sql.NullString
-	var celularOperador sql.NullString
-	var numeroCuentaBancariaOperador sql.NullString
-	var tipoCuentaBancariaOperador sql.NullString
-	var bancoOperador sql.NullString
+	err := row.Scan(&factura.ID, &factura.Empresa.Nombre, &factura.Empresa.NIT, &factura.Fecha, &serviciosJSON, &factura.ValorTotal, &factura.Operador.Nombre, &factura.Operador.TipoDocumento, &factura.Operador.Documento, &factura.Operador.CiudadExpedicionDocumento, &factura.Operador.Celular, &factura.Operador.NumeroCuentaBancaria, &factura.Operador.TipoCuentaBancaria, &factura.Operador.Banco)
 
-	err := row.Scan(&factura.ID, &nombreEmpresa, &NITEmpresa, &factura.Fecha, &serviciosJSON, &factura.ValorTotal, &nombreOperador, &tipoDocumentoOperador, &documentoOperador, &ciudadExpedicionDocumentoOperador, &celularOperador, &numeroCuentaBancariaOperador, &tipoCuentaBancariaOperador, &bancoOperador)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// Manejar el caso en que no hay filas para escanear
@@ -263,37 +210,6 @@ func GenerarPDF(c *gin.Context, db *storage.DB) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-	}
-
-	if nombreEmpresa.Valid {
-		factura.NombreEmpresa = nombreEmpresa.String
-	}
-	if NITEmpresa.Valid {
-		factura.NITEmpresa = NITEmpresa.String
-	}
-	if nombreOperador.Valid {
-		factura.NombreOperador = nombreOperador.String
-	}
-	if tipoDocumentoOperador.Valid {
-		factura.TipoDocumentoOperador = tipoDocumentoOperador.String
-	}
-	if documentoOperador.Valid {
-		factura.DocumentoOperador = documentoOperador.String
-	}
-	if ciudadExpedicionDocumentoOperador.Valid {
-		factura.CiudadExpedicionDocumentoOperador = ciudadExpedicionDocumentoOperador.String
-	}
-	if celularOperador.Valid {
-		factura.CelularOperador = celularOperador.String
-	}
-	if numeroCuentaBancariaOperador.Valid {
-		factura.NumeroCuentaBancariaOperador = numeroCuentaBancariaOperador.String
-	}
-	if tipoCuentaBancariaOperador.Valid {
-		factura.TipoCuentaBancariaOperador = tipoCuentaBancariaOperador.String
-	}
-	if bancoOperador.Valid {
-		factura.BancoOperador = bancoOperador.String
 	}
 
 	// Decodificar los datos JSON de los servicios en una slice de estructuras Servicio
@@ -311,18 +227,18 @@ func GenerarPDF(c *gin.Context, db *storage.DB) {
 	pdf.SetFont("Arial", "", 12)
 	pdf.Cell(40, 10, "Cartagena   "+factura.Fecha.Format("02-01-2006"))
 	pdf.Ln(10)
-	pdf.Cell(40, 10, factura.NombreEmpresa)
+	pdf.Cell(40, 10, factura.Empresa.Nombre)
 	pdf.Ln(10)
-	pdf.Cell(40, 10, "Nit: "+factura.NITEmpresa)
+	pdf.Cell(40, 10, "Nit: "+factura.Empresa.NIT)
 	pdf.Ln(20)
 
 	// Agregar información del cliente
 	pdf.SetFont("Arial", "", 12)
 	pdf.Cell(40, 10, "DEBE A:")
 	pdf.Ln(10)
-	pdf.Cell(40, 10, factura.NombreOperador)
+	pdf.Cell(40, 10, factura.Operador.Nombre)
 	pdf.Ln(10)
-	pdf.Cell(40, 10, factura.TipoDocumentoOperador+": "+factura.DocumentoOperador+" Expedida en "+factura.CiudadExpedicionDocumentoOperador)
+	pdf.Cell(40, 10, factura.Operador.TipoDocumento+": "+factura.Operador.Documento+" Expedida en "+factura.Operador.CiudadExpedicionDocumento)
 	pdf.Ln(20)
 
 	// Agregar valor total
@@ -348,23 +264,23 @@ func GenerarPDF(c *gin.Context, db *storage.DB) {
 	pdf.Ln(20)
 	pdf.Cell(40, 10, "_____________________________________________")
 	pdf.Ln(20)
-	pdf.Cell(40, 10, factura.NombreOperador)
+	pdf.Cell(40, 10, factura.Operador.Nombre)
 	pdf.Ln(10)
-	pdf.Cell(40, 10, factura.TipoDocumentoOperador+": "+factura.DocumentoOperador)
+	pdf.Cell(40, 10, factura.Operador.TipoDocumento+": "+factura.Operador.Documento)
 	pdf.Ln(10)
-	if factura.CelularOperador != "" {
-		pdf.Cell(40, 10, "Cel: "+factura.CelularOperador)
+	if factura.Operador.Celular != "" {
+		pdf.Cell(40, 10, "Cel: "+factura.Operador.Celular)
 	}
-	if factura.NumeroCuentaBancariaOperador != "" {
+	if factura.Operador.NumeroCuentaBancaria != "" {
 		tipoCuenta := ""
-		if factura.TipoCuentaBancariaOperador != "" {
-			tipoCuenta = " " + factura.TipoCuentaBancariaOperador
+		if factura.Operador.TipoCuentaBancaria != "" {
+			tipoCuenta = " " + factura.Operador.TipoCuentaBancaria
 		}
 		banco := ""
-		if factura.BancoOperador != "" {
-			banco = " " + factura.BancoOperador
+		if factura.Operador.Banco != "" {
+			banco = " " + factura.Operador.Banco
 		}
-		pdf.Cell(40, 10, fmt.Sprintf("N° Cuenta: %s%s%s", factura.NumeroCuentaBancariaOperador, tipoCuenta, banco))
+		pdf.Cell(40, 10, fmt.Sprintf("N° Cuenta: %s%s%s", factura.Operador.NumeroCuentaBancaria, tipoCuenta, banco))
 	}
 
 	// Guardar el PDF en un archivo temporal
