@@ -221,10 +221,11 @@ func GenerarPDF(c *gin.Context, db *storage.DB) {
 
 	// Crear un nuevo documento PDF
 	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.AddUTF8Font("DejaVuSans", "", "../../font/DejaVuSans.ttf")
 	pdf.AddPage()
 
 	// Agregar información de la factura
-	pdf.SetFont("Arial", "", 12)
+	pdf.SetFont("DejaVuSans", "", 12)
 	pdf.Cell(40, 10, "Cartagena   "+factura.Fecha.Format("02-01-2006"))
 	pdf.Ln(10)
 	pdf.Cell(40, 10, factura.Empresa.Nombre)
@@ -233,7 +234,7 @@ func GenerarPDF(c *gin.Context, db *storage.DB) {
 	pdf.Ln(20)
 
 	// Agregar información del cliente
-	pdf.SetFont("Arial", "", 12)
+	pdf.SetFont("DejaVuSans", "", 12)
 	pdf.Cell(40, 10, "DEBE A:")
 	pdf.Ln(10)
 	pdf.Cell(40, 10, factura.Operador.Nombre)
@@ -242,14 +243,14 @@ func GenerarPDF(c *gin.Context, db *storage.DB) {
 	pdf.Ln(20)
 
 	// Agregar valor total
-	pdf.SetFont("Arial", "", 12)
+	pdf.SetFont("DejaVuSans", "", 12)
 	pdf.Cell(40, 10, "LA SUMA DE:")
 	pdf.Ln(10)
 	pdf.Cell(40, 10, fmt.Sprintf("$ %.2f pesos.", factura.ValorTotal))
 	pdf.Ln(20)
 
 	// Agregar concepto
-	pdf.SetFont("Arial", "", 12)
+	pdf.SetFont("DejaVuSans", "", 12)
 	pdf.Cell(40, 10, "Por concepto de:")
 	pdf.Ln(10)
 	for _, servicio := range factura.Servicios {
@@ -259,7 +260,7 @@ func GenerarPDF(c *gin.Context, db *storage.DB) {
 	pdf.Ln(20)
 
 	// Agregar firma y datos de contacto
-	pdf.SetFont("Arial", "", 12)
+	pdf.SetFont("DejaVuSans", "", 12)
 	pdf.Cell(40, 10, "Cordialmente")
 	pdf.Ln(20)
 	pdf.Cell(40, 10, "_____________________________________________")
