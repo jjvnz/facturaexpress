@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jung-kurt/gofpdf"
@@ -246,7 +247,25 @@ func GenerarPDF(c *gin.Context, db *storage.DB) {
 	pdf.SetFont("DejaVuSans", "", 12)
 	pdf.Cell(40, 10, "LA SUMA DE:")
 	pdf.Ln(10)
-	pdf.Cell(40, 10, fmt.Sprintf("$ %.2f pesos.", factura.ValorTotal))
+	// Formatear el número con dos decimales
+	valorFormateado := strconv.FormatFloat(factura.ValorTotal, 'f', 2, 64)
+
+	// Separar la parte entera y la parte decimal del número
+	partes := strings.Split(valorFormateado, ".")
+
+	// Agregar el separador de miles a la parte entera del número
+	for i := len(partes[0]) - 3; i > 0; i -= 3 {
+		partes[0] = partes[0][:i] + "." + partes[0][i:]
+	}
+
+	// Unir la parte entera y la parte decimal del número con una coma
+	valorFormateado = strings.Join(partes, ",")
+
+	// Agregar el símbolo de peso y el texto "pesos"
+	texto := fmt.Sprintf("$ %s pesos.", valorFormateado)
+
+	// Utilizar el texto formateado en la celda del PDF
+	pdf.Cell(40, 10, texto)
 	pdf.Ln(20)
 
 	// Agregar concepto
