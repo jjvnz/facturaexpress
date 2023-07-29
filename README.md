@@ -34,14 +34,19 @@ facturaexpress/
 │   └── router.go
 ├── cmd/
 │   └── server/
+|       └── .env
 │       └── main.go
+├── font/
+|    └── DejaVuSans.ttf
 ├── pkg/
 │   ├── models/
 │   │   └── factura.go
 │   └── storage/
 │       └── db.go
+├── .gitignore
 ├── go.mod
-└── go.sum
+├── go.sum
+└── README.md
 ```
 
 - The `api` folder contains all code related to the API, including controllers in the `handlers` subfolder, middleware in the `middleware` subfolder, and the router in the `router.go` file.
