@@ -9,6 +9,7 @@ type Factura struct {
 	Servicios  []Servicio `json:"servicios"`
 	ValorTotal float64    `json:"valor_total"`
 	Operador   Operador   `json:"operador"`
+	UsuarioID  int64      `json:"usuario_id"`
 }
 
 type Empresa struct {
