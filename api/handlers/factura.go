@@ -11,10 +11,20 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jung-kurt/gofpdf"
 )
+
+func unmarshalServicios(data []byte) []models.Servicio {
+	var servicios []models.Servicio
+	err := json.Unmarshal(data, &servicios)
+	if err != nil {
+		fmt.Println("error al decodificar los datos JSON!", err)
+	}
+	return servicios
+}
 
 func ListarFacturas(c *gin.Context, db *storage.DB) {
 	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -56,22 +66,34 @@ func ListarFacturas(c *gin.Context, db *storage.DB) {
 	}
 	defer rows.Close()
 
-	// Loop through the rows and decode each row into a Factura struct
-
 	var facturas []models.Factura
 	for rows.Next() {
-		var factura models.Factura
-		var serviciosJSON []byte
-		err := rows.Scan(&factura.ID, &factura.Empresa.Nombre, &factura.Empresa.NIT, &factura.Fecha, &serviciosJSON, &factura.ValorTotal, &factura.Operador.Nombre, &factura.Operador.TipoDocumento, &factura.Operador.Documento, &factura.Operador.CiudadExpedicionDocumento, &factura.Operador.Celular, &factura.Operador.NumeroCuentaBancaria, &factura.Operador.TipoCuentaBancaria, &factura.Operador.Banco)
+		var (
+			id, usuarioID                     int
+			nombreEmpresa, nitEmpresa         string
+			fecha                             time.Time
+			servicios                         []byte
+			valorTotal                        float64
+			nombreOperador, tipoDocumento     string
+			documento, ciudadExpedicion       string
+			celular, numeroCuenta, tipoCuenta string
+			banco                             string
+		)
+
+		err := rows.Scan(&id, &nombreEmpresa, &nitEmpresa, &fecha, &servicios, &valorTotal, &nombreOperador, &tipoDocumento, &documento, &ciudadExpedicion, &celular, &numeroCuenta, &tipoCuenta, &banco, &usuarioID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		err = json.Unmarshal(serviciosJSON, &factura.Servicios)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
+		factura := models.Factura{
+			ID:         id,
+			Empresa:    models.Empresa{Nombre: nombreEmpresa, NIT: nitEmpresa},
+			Fecha:      fecha,
+			Servicios:  unmarshalServicios(servicios),
+			ValorTotal: valorTotal,
+			Operador:   models.Operador{Nombre: nombreOperador, TipoDocumento: tipoDocumento, Documento: documento, CiudadExpedicionDocumento: ciudadExpedicion, Celular: celular, NumeroCuentaBancaria: numeroCuenta, TipoCuentaBancaria: tipoCuenta, Banco: banco},
+			UsuarioID:  int64(usuarioID),
 		}
 		facturas = append(facturas, factura)
 	}
@@ -80,7 +102,6 @@ func ListarFacturas(c *gin.Context, db *storage.DB) {
 	case 0:
 		c.JSON(http.StatusNotFound, gin.H{"error": "La página solicitada no existe"})
 	default:
-		// Count the total number of facturas in the database
 		var totalFacturas int
 		err = db.QueryRow(`SELECT COUNT(*) FROM facturas`).Scan(&totalFacturas)
 		if err != nil {
@@ -88,7 +109,6 @@ func ListarFacturas(c *gin.Context, db *storage.DB) {
 			return
 		}
 
-		// Calculate the total number of pages
 		totalPages := int(math.Ceil(float64(totalFacturas) / float64(limit)))
 
 		c.JSON(http.StatusOK, gin.H{
@@ -100,7 +120,6 @@ func ListarFacturas(c *gin.Context, db *storage.DB) {
 }
 
 func CrearFactura(c *gin.Context, db *storage.DB) {
-	// Decodifica el cuerpo de la solicitud para obtener los datos de la factura
 	var factura models.Factura
 	err := c.BindJSON(&factura)
 	if err != nil {
@@ -108,16 +127,14 @@ func CrearFactura(c *gin.Context, db *storage.DB) {
 		return
 	}
 
-	// Convierte la slice de estructuras a una cadena JSON
 	serviciosJSON, err := json.Marshal(factura.Servicios)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Guarda la factura en la base de datos y recupera el ID generado
-	query := `INSERT INTO facturas (nombre_empresa, nit_empresa, fecha, servicios, valor_total, nombre_operador, tipo_documento_operador, documento_operador, ciudad_expedicion_documento_operador, celular_operador, numero_cuenta_bancaria_operador, tipo_cuenta_bancaria_operador, banco_operador) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`
-	err = db.QueryRow(query, factura.Empresa.Nombre, factura.Empresa.NIT, factura.Fecha, serviciosJSON, factura.ValorTotal, factura.Operador.Nombre, factura.Operador.TipoDocumento, factura.Operador.Documento, factura.Operador.CiudadExpedicionDocumento, factura.Operador.Celular, factura.Operador.NumeroCuentaBancaria, factura.Operador.TipoCuentaBancaria, factura.Operador.Banco).Scan(&factura.ID)
+	query := `INSERT INTO facturas (nombre_empresa, nit_empresa, fecha, servicios, valor_total, nombre_operador, tipo_documento_operador, documento_operador, ciudad_expedicion_documento_operador, celular_operador, numero_cuenta_bancaria_operador, tipo_cuenta_bancaria_operador, banco_operador, usuario_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,$14) RETURNING id`
+	err = db.QueryRow(query, factura.Empresa.Nombre, factura.Empresa.NIT, factura.Fecha, serviciosJSON, factura.ValorTotal, factura.Operador.Nombre, factura.Operador.TipoDocumento, factura.Operador.Documento, factura.Operador.CiudadExpedicionDocumento, factura.Operador.Celular, factura.Operador.NumeroCuentaBancaria, factura.Operador.TipoCuentaBancaria, factura.Operador.Banco, factura.UsuarioID).Scan(&factura.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -127,10 +144,8 @@ func CrearFactura(c *gin.Context, db *storage.DB) {
 }
 
 func ActualizarFactura(c *gin.Context, db *storage.DB) {
-	// Get the ID of the factura to update from the URL parameter
 	id := c.Param("id")
 
-	// Decode the request body to get the updated factura data
 	var factura models.Factura
 	err := c.BindJSON(&factura)
 	if err != nil {
@@ -138,14 +153,12 @@ func ActualizarFactura(c *gin.Context, db *storage.DB) {
 		return
 	}
 
-	// Convert the slice of Servicio structs to a JSON string
 	serviciosJSON, err := json.Marshal(factura.Servicios)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Update the factura in the database
 	query := `UPDATE facturas SET nombre_empresa = $1,nit_empresa = $2,
     fecha = $3,servicios = $4,
     valor_total = $5,nombre_operador = $6,
@@ -155,8 +168,8 @@ func ActualizarFactura(c *gin.Context, db *storage.DB) {
     celular_operador = $10,
     numero_cuenta_bancaria_operador = $11,
     tipo_cuenta_bancaria_operador = $12,
-    banco_operador = $13 WHERE id = $14`
-	result, err := db.Exec(query, factura.Empresa.Nombre, factura.Empresa.NIT, factura.Fecha, serviciosJSON, factura.ValorTotal, factura.Operador.Nombre, factura.Operador.TipoDocumento, factura.Operador.Documento, factura.Operador.CiudadExpedicionDocumento, factura.Operador.Celular, factura.Operador.NumeroCuentaBancaria, factura.Operador.TipoCuentaBancaria, factura.Operador.Banco, id)
+    banco_operador = $13, usuario_id=$14 WHERE id = $15`
+	result, err := db.Exec(query, factura.Empresa.Nombre, factura.Empresa.NIT, factura.Fecha, serviciosJSON, factura.ValorTotal, factura.Operador.Nombre, factura.Operador.TipoDocumento, factura.Operador.Documento, factura.Operador.CiudadExpedicionDocumento, factura.Operador.Celular, factura.Operador.NumeroCuentaBancaria, factura.Operador.TipoCuentaBancaria, factura.Operador.Banco, factura.UsuarioID, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -170,10 +183,8 @@ func ActualizarFactura(c *gin.Context, db *storage.DB) {
 }
 
 func EliminarFactura(c *gin.Context, db *storage.DB) {
-	// Get the ID of the factura to delete from the URL parameter
 	id := c.Param("id")
 
-	// Delete the factura from the database
 	query := `DELETE FROM facturas WHERE id = $1`
 	result, err := db.Exec(query, id)
 	if err != nil {
@@ -182,7 +193,6 @@ func EliminarFactura(c *gin.Context, db *storage.DB) {
 	}
 
 	if rowsAffected, _ := result.RowsAffected(); rowsAffected > 0 {
-		// Return a success message if the delete was successful
 		c.JSON(http.StatusOK, gin.H{"message": "Factura eliminada correctamente"})
 	} else {
 		c.JSON(http.StatusNotFound, gin.H{"error": "No se encontró la factura con el ID especificado"})
@@ -200,7 +210,7 @@ func GenerarPDF(c *gin.Context, db *storage.DB) {
 	// Decodificar la fila en una estructura Factura
 	var factura models.Factura
 	var serviciosJSON []byte
-	err := row.Scan(&factura.ID, &factura.Empresa.Nombre, &factura.Empresa.NIT, &factura.Fecha, &serviciosJSON, &factura.ValorTotal, &factura.Operador.Nombre, &factura.Operador.TipoDocumento, &factura.Operador.Documento, &factura.Operador.CiudadExpedicionDocumento, &factura.Operador.Celular, &factura.Operador.NumeroCuentaBancaria, &factura.Operador.TipoCuentaBancaria, &factura.Operador.Banco)
+	err := row.Scan(&factura.ID, &factura.Empresa.Nombre, &factura.Empresa.NIT, &factura.Fecha, &serviciosJSON, &factura.ValorTotal, &factura.Operador.Nombre, &factura.Operador.TipoDocumento, &factura.Operador.Documento, &factura.Operador.CiudadExpedicionDocumento, &factura.Operador.Celular, &factura.Operador.NumeroCuentaBancaria, &factura.Operador.TipoCuentaBancaria, &factura.Operador.Banco, &factura.UsuarioID)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
