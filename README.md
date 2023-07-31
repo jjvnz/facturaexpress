@@ -26,27 +26,32 @@ The recommended structure for a Go API project using the GIN framework is as fol
 
 ```
 facturaexpress/
-├── api/
-│   ├── handlers/
-│   │   ├── factura.go
-│   │   └── welcome.go
-│   ├── middleware/
-│   └── router.go
+|── api/
+|    |── handlers/
+|    |    |── factura.go
+|    |    |── login.go
+|    |    |── registro.go
+|    |    └── welcome.go
+|    └── middleware/
+|    |    └── auth.go
+|    └── router.go
 ├── cmd/
-│   └── server/
-|       └── .env
-│       └── main.go
+|    └── server/
+|        ├── .env
+|        └── main.go
 ├── font/
 |    └── DejaVuSans.ttf
 ├── pkg/
-│   ├── models/
-│   │   └── factura.go
-│   └── storage/
-│       └── db.go
+|    ├── models/
+|    |    ├── claims.go
+|    |    ├── factura.go
+|    |    └── usuario.go
+|    └── storage/
+|        └── db.go
 ├── .gitignore
+├── README.md
 ├── go.mod
-├── go.sum
-└── README.md
+└── go.sum
 ```
 
 - The `api` folder contains all code related to the API, including controllers in the `handlers` subfolder, middleware in the `middleware` subfolder, and the router in the `router.go` file.
