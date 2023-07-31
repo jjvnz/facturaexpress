@@ -1,27 +1,27 @@
 # FACTURAEXPRESS
 
-## Installation of the GIN framework
+## Instalación del marco GIN
 
-To install the GIN framework in your Go project, follow these steps:
+Para instalar el marco GIN en su proyecto Go, siga estos pasos:
 
-1. Create a new directory for your project and navigate to it:
+1. Cree un nuevo directorio para su proyecto y navegue hasta él:
 ```
 mkdir facturaexpress && cd facturaexpress
 ```
 
-2. Initialize a new Go module:
+2. Inicialice un nuevo módulo Go:
 ```
 go mod init facturaexpress
 ```
 
-3. Install the `gin-gonic/gin` package using the `go get` command:
+3. Instale el paquete `gin-gonic/gin` usando el comando `go get`:
 ```
 go get -u github.com/gin-gonic/gin
 ```
 
-## Project Structure
+## Estructura del proyecto
 
-The recommended structure for a Go API project using the GIN framework is as follows:
+La estructura escojida para el proyecto es la siguiente:
 
 
 ```
@@ -54,22 +54,46 @@ facturaexpress/
 └── go.sum
 ```
 
-- The `api` folder contains all code related to the API, including controllers in the `handlers` subfolder, middleware in the `middleware` subfolder, and the router in the `router.go` file.
-- The `cmd` folder contains subfolders for each executable command, and each subfolder contains a `main.go` file that defines the command. In this case, there is only one command called `server` that starts the API server.
-- The `pkg` folder contains reusable packages that can be imported by commands in the `cmd` folder. In this example, there are two packages: `models`, which contains data model definitions, and `storage`, which contains code for interacting with the database.
-- The `go.mod` and `go.sum` files define the project's dependencies.
+- La carpeta `api` contiene todo el código relacionado con la API, incluidos los controladores en la subcarpeta `handlers`, el middleware en la subcarpeta `middleware` y el enrutador en el archivo `router.go`.
+- La carpeta `cmd` contiene subcarpetas para cada comando ejecutable, y cada subcarpeta contiene un archivo `main.go` que define el comando. En este caso, solo hay un comando llamado `server` que inicia el servidor de la API.
+- La carpeta `pkg` contiene paquetes reutilizables que pueden ser importados por comandos en la carpeta `cmd`. En este ejemplo, hay dos paquetes: `models`, que contiene definiciones de modelos de datos, y `storage`, que contiene código para interactuar con la base de datos.
+- Los archivos `go.mod` y `go.sum` definen las dependencias del proyecto.
 
-## Database Schema
+## Esquema de base de datos
 
-Here is an example of a database schema for a table named `facturas`:
+Aquí el esquema de base de datos para una tabla llamada `facturas`:
 
 ```sql
 CREATE TABLE facturas (
     id SERIAL PRIMARY KEY,
-    nombre_operador TEXT NOT NULL,
-    nit_operador TEXT NOT NULL,
+    empresa_nombre TEXT NOT NULL,
+    empresa_nit TEXT NOT NULL,
     fecha TIMESTAMP NOT NULL,
     servicios JSONB NOT NULL,
-    valor_total NUMERIC NOT NULL
+    valor_total NUMERIC NOT NULL,
+    operador_nombre TEXT NOT NULL,
+    operador_tipo_documento TEXT NOT NULL,
+    operador_documento TEXT NOT NULL,
+    operador_ciudad_expedicion_documento TEXT NOT NULL,
+    operador_celular TEXT NOT NULL,
+    operador_numero_cuenta_bancaria TEXT NOT NULL,
+    operador_tipo_cuenta_bancaria TEXT NOT NULL,
+    operador_banco TEXT NOT NULL,
+    usuario_id INTEGER NOT NULL
 );
 ```
+
+Este esquema incluye columnas para los campos en las estructuras `Factura`, `Empresa` y `Operador`. El campo `Servicios` se almacena como una columna JSONB, lo que le permite almacenar una matriz de objetos `Servicio` en una sola fila. Se ha agregado la columna `usuario_id` para almacenar el ID del usuario asociado con cada factura.
+
+También puede crear una nueva tabla llamada `usuarios` para almacenar datos de usuario. Aquí el esquema para la tabla `usuarios`:
+
+```sql
+CREATE TABLE usuarios (
+    id SERIAL PRIMARY KEY,
+    nombre_usuario TEXT NOT NULL,
+    password TEXT NOT NULL,
+    correo TEXT NOT NULL
+);
+```
+
+Este esquema incluye columnas para los campos en la estructura `Usuario`.
