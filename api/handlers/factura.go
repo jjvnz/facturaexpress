@@ -27,45 +27,56 @@ func unmarshalServicios(data []byte) []models.Servicio {
 }
 
 func ListarFacturas(c *gin.Context, db *storage.DB) {
+	// Obtener el rol del usuario del token JWT
+	claims := c.MustGet("claims").(*models.Claims)
+	rol := claims.Role
+
+	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
+	if rol != "administrador" && rol != "usuario" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "El usuario no tiene el rol necesario para acceder a esta ruta"})
+		return
+	}
 	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
 	if err != nil || page < 1 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "El parámetro 'page' debe ser un número entero positivo"})
 		return
 	}
-
 	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	if err != nil || limit < 1 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "El parámetro 'limit' debe ser un número entero positivo"})
 		return
 	}
-
 	if limit > 100 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "El parámetro 'limit' no puede ser mayor a 100"})
 		return
 	}
-
 	offset := (page - 1) * limit
 	if offset < 0 {
 		offset = 0
 	}
-
 	filterField := c.Query("filter_field")
 	filterValue := c.Query("filter_value")
-
 	var rows *sql.Rows
 	if filterField != "" && filterValue != "" {
 		query := `SELECT * FROM facturas WHERE $1 = $2 ORDER BY id ASC LIMIT $3 OFFSET $4`
 		rows, err = db.Query(query, filterField, filterValue, limit, offset)
 	} else {
-		query := `SELECT * FROM facturas ORDER BY id ASC LIMIT $1 OFFSET $2`
-		rows, err = db.Query(query, limit, offset)
+		// Verificar si el usuario tiene el rol de "administrador"
+		if rol == "administrador" {
+			// Si el usuario es un administrador, listar todas las facturas
+			query := `SELECT * FROM facturas ORDER BY id ASC LIMIT $1 OFFSET $2`
+			rows, err = db.Query(query, limit, offset)
+		} else {
+			// Si el usuario no es un administrador, listar solo sus propias facturas
+			query := `SELECT * FROM facturas WHERE usuario_id = $1 ORDER BY id ASC LIMIT $2 OFFSET $3`
+			rows, err = db.Query(query, claims.UsuarioID, limit, offset)
+		}
 	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	defer rows.Close()
-
 	var facturas []models.Factura
 	for rows.Next() {
 		var (
@@ -79,38 +90,45 @@ func ListarFacturas(c *gin.Context, db *storage.DB) {
 			celular, numeroCuenta, tipoCuenta string
 			banco                             string
 		)
-
 		err := rows.Scan(&id, &nombreEmpresa, &nitEmpresa, &fecha, &servicios, &valorTotal, &nombreOperador, &tipoDocumento, &documento, &ciudadExpedicion, &celular, &numeroCuenta, &tipoCuenta, &banco, &usuarioID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-
 		factura := models.Factura{
 			ID:         id,
 			Empresa:    models.Empresa{Nombre: nombreEmpresa, NIT: nitEmpresa},
 			Fecha:      fecha,
 			Servicios:  unmarshalServicios(servicios),
 			ValorTotal: valorTotal,
-			Operador:   models.Operador{Nombre: nombreOperador, TipoDocumento: tipoDocumento, Documento: documento, CiudadExpedicionDocumento: ciudadExpedicion, Celular: celular, NumeroCuentaBancaria: numeroCuenta, TipoCuentaBancaria: tipoCuenta, Banco: banco},
-			UsuarioID:  int64(usuarioID),
+			Operador: models.Operador{Nombre: nombreOperador, TipoDocumento: tipoDocumento,
+				Documento: documento, CiudadExpedicionDocumento: ciudadExpedicion,
+				Celular:              celular,
+				NumeroCuentaBancaria: numeroCuenta,
+				TipoCuentaBancaria:   tipoCuenta, Banco: banco},
+			UsuarioID: int64(usuarioID),
 		}
 		facturas = append(facturas, factura)
 	}
-
 	switch len(facturas) {
 	case 0:
 		c.JSON(http.StatusNotFound, gin.H{"error": "La página solicitada no existe"})
 	default:
 		var totalFacturas int
-		err = db.QueryRow(`SELECT COUNT(*) FROM facturas`).Scan(&totalFacturas)
+		// Verificar si el usuario tiene el rol de "administrador"
+		if rol == "administrador" {
+			// Si el usuario es un administrador contar todas las facturas
+			err = db.QueryRow(`SELECT COUNT(*) FROM facturas`).Scan(&totalFacturas)
+		} else {
+			// Si el usuario no es un administrador contar solo sus propias facturas
+			query := `SELECT COUNT(*) FROM facturas WHERE usuario_id = $1`
+			err = db.QueryRow(query, claims.UsuarioID).Scan(&totalFacturas)
+		}
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-
 		totalPages := int(math.Ceil(float64(totalFacturas) / float64(limit)))
-
 		c.JSON(http.StatusOK, gin.H{
 			"facturas":    facturas,
 			"total_pages": totalPages,
@@ -120,6 +138,15 @@ func ListarFacturas(c *gin.Context, db *storage.DB) {
 }
 
 func CrearFactura(c *gin.Context, db *storage.DB) {
+	// Obtener el rol del usuario del token JWT
+	claims := c.MustGet("claims").(*models.Claims)
+	rol := claims.Role
+
+	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
+	if rol != "administrador" && rol != "usuario" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "El usuario no tiene el rol necesario para acceder a esta ruta"})
+		return
+	}
 	var factura models.Factura
 	err := c.BindJSON(&factura)
 	if err != nil {

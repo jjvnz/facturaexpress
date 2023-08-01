@@ -17,8 +17,6 @@ func NewRouter(db *storage.DB, jwtKey []byte) *gin.Engine {
 	config.AllowOrigins = []string{"http://localhost:5173"}
 	router.Use(cors.New(config))
 
-	router.GET("/hiwelcome", handlers.HelloHandler)
-
 	router.POST("/register", func(c *gin.Context) {
 		handlers.Register(c, db)
 	})
@@ -30,18 +28,38 @@ func NewRouter(db *storage.DB, jwtKey []byte) *gin.Engine {
 	// Rutas protegidas con el middleware AuthMiddleware
 	authorized := router.Group("/")
 	authorized.Use(func(c *gin.Context) {
-		middleware.AuthMiddleware(c, jwtKey)
+		middleware.AuthMiddleware(c, db, jwtKey)
 	})
 	{
+		adminRoutes := authorized.Group("/")
+		adminRoutes.Use(func(c *gin.Context) {
+			middleware.RoleAuthMiddleware(c, db, "administrador")
+		})
+
+		adminRoutes.PUT("/users/:userID/roles/:roleID", func(c *gin.Context) {
+			handlers.AssignRole(c, db)
+		})
+
+		adminRoutes.PUT("/users/:userID/new_role/:newRoleID", func(c *gin.Context) {
+			handlers.ActualizarRol(c, db)
+		})
+
+		adminRoutes.GET("/roles", func(c *gin.Context) {
+			handlers.ListRoles(c, db)
+		})
+
 		authorized.GET("/facturas", func(c *gin.Context) {
 			handlers.ListarFacturas(c, db)
 		})
+
 		authorized.POST("/facturas", func(c *gin.Context) {
 			handlers.CrearFactura(c, db)
 		})
+
 		authorized.PUT("/facturas/:id", func(c *gin.Context) {
 			handlers.ActualizarFactura(c, db)
 		})
+
 		authorized.DELETE("/facturas/:id", func(c *gin.Context) {
 			handlers.EliminarFactura(c, db)
 		})
