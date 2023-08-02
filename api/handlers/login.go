@@ -5,6 +5,7 @@ import (
 	"errors"
 	"facturaexpress/pkg/models"
 	"facturaexpress/pkg/storage"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -105,7 +106,7 @@ func generateJWTToken(jwtKey []byte, usuarioID int64, role string) (string, erro
 	})
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error al generar el token JWT: %v", err)
 	}
 	return tokenString, nil
 }

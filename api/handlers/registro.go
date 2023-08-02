@@ -75,7 +75,7 @@ func Register(c *gin.Context, db *storage.DB) {
 	defer stmt.Close()
 	_, err = stmt.Exec(userID, roleID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al asignar el rol al usuario"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al guardar el usuario en la base dEe datos"})
 		return
 	}
 

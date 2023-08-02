@@ -1,9 +1,6 @@
 package models
 
 import (
-	"database/sql"
-	"encoding/json"
-	"fmt"
 	"time"
 )
 
@@ -36,46 +33,4 @@ type Operador struct {
 type Servicio struct {
 	Descripcion string  `json:"descripcion"`
 	Valor       float64 `json:"valor"`
-}
-
-func unmarshalServicios(data []byte) []Servicio {
-	var servicios []Servicio
-	err := json.Unmarshal(data, &servicios)
-	if err != nil {
-		fmt.Println("Error al decodificar los datos JSON!", err)
-	}
-	return servicios
-}
-
-func (f *Factura) Scan(row *sql.Rows) error {
-	var (
-		id, usuarioID                     int
-		nombreEmpresa, nitEmpresa         string
-		fecha                             time.Time
-		servicios                         []byte
-		valorTotal                        float64
-		nombreOperador, tipoDocumento     string
-		documento, ciudadExpedicion       string
-		celular, numeroCuenta, tipoCuenta string
-		banco                             string
-	)
-	err := row.Scan(&id, &nombreEmpresa, &nitEmpresa, &fecha, &servicios, &valorTotal, &nombreOperador, &tipoDocumento, &documento, &ciudadExpedicion, &celular, &numeroCuenta, &tipoCuenta, &banco, &usuarioID)
-	if err != nil {
-		return err
-	}
-	f.ID = id
-	f.Empresa = Empresa{Nombre: nombreEmpresa, NIT: nitEmpresa}
-	f.Fecha = fecha
-	f.Servicios = unmarshalServicios(servicios)
-	f.ValorTotal = valorTotal
-	f.Operador = Operador{Nombre: nombreOperador,
-		TipoDocumento:             tipoDocumento,
-		Documento:                 documento,
-		CiudadExpedicionDocumento: ciudadExpedicion,
-		Celular:                   celular,
-		NumeroCuentaBancaria:      numeroCuenta,
-		TipoCuentaBancaria:        tipoCuenta,
-		Banco:                     banco}
-	f.UsuarioID = int64(usuarioID)
-	return nil
 }

@@ -11,10 +11,20 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jung-kurt/gofpdf"
 )
+
+func unmarshalServicios(data []byte) ([]models.Servicio, error) {
+	var servicios []models.Servicio
+	err := json.Unmarshal(data, &servicios)
+	if err != nil {
+		return nil, err
+	}
+	return servicios, nil
+}
 
 func ListarFacturas(c *gin.Context, db *storage.DB) {
 	// Obtener el rol del usuario del token JWT
@@ -81,15 +91,42 @@ func ListarFacturas(c *gin.Context, db *storage.DB) {
 	defer rows.Close()
 
 	// Procesar las filas y construir el arreglo de facturas
-	facturas := make([]models.Factura, 0, limit)
+	var facturas []models.Factura
 	for rows.Next() {
-		var factura models.Factura
-		err := factura.Scan(rows)
+		var (
+			id, usuarioID                     int
+			nombreEmpresa, nitEmpresa         string
+			fecha                             time.Time
+			servicios                         []byte
+			valorTotal                        float64
+			nombreOperador, tipoDocumento     string
+			documento, ciudadExpedicion       string
+			celular, numeroCuenta, tipoCuenta string
+			banco                             string
+		)
+
+		err := rows.Scan(&id, &nombreEmpresa, &nitEmpresa, &fecha, &servicios, &valorTotal, &nombreOperador, &tipoDocumento, &documento, &ciudadExpedicion, &celular, &numeroCuenta, &tipoCuenta, &banco, &usuarioID)
 		if err != nil {
-			errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al procesar las facturas")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		serviciosDeserializados, err := unmarshalServicios(servicios)
+		if err != nil {
+			errorResponse := models.ErrorResponseInit("SERVICES_DESERIALIZATION_ERROR", "Error al deserializar servicios")
 			c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse)
 			c.Abort()
 			return
+		}
+
+		factura := models.Factura{
+			ID:         id,
+			Empresa:    models.Empresa{Nombre: nombreEmpresa, NIT: nitEmpresa},
+			Fecha:      fecha,
+			Servicios:  serviciosDeserializados,
+			ValorTotal: valorTotal,
+			Operador:   models.Operador{Nombre: nombreOperador, TipoDocumento: tipoDocumento, Documento: documento, CiudadExpedicionDocumento: ciudadExpedicion, Celular: celular, NumeroCuentaBancaria: numeroCuenta, TipoCuentaBancaria: tipoCuenta, Banco: banco},
+			UsuarioID:  int64(usuarioID),
 		}
 		facturas = append(facturas, factura)
 	}
