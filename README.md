@@ -1,6 +1,6 @@
 # FACTURAEXPRESS
 
-FACTURAEXPRESS es una API escrita en Go que utiliza el marco GIN y la base de datos PostgreSQL. La API permite a los usuarios crear y gestionar facturas, con campos para información de la empresa, servicios, valor total y detalles del operador. También hay una tabla de usuarios para almacenar información de inicio de sesión y registro.
+FACTURAEXPRESS es una API escrita en Go que utiliza el marco GIN y la base de datos PostgreSQL. La API permite a los usuarios crear y gestionar facturas, con campos para información de la empresa, servicios, valor total y detalles del operador. También hay una tabla de usuarios para almacenar información de inicio de sesión y registro incluye la funcionalidad de generar reportes de facturas en formato PDF.
 
 ## Requisitos previos
 
