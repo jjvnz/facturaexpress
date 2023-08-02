@@ -1,15 +1,15 @@
 package handlers
 
 import (
-	"facturaexpress/pkg/models"
-	"facturaexpress/pkg/storage"
+	"facturaexpress/data"
+	"facturaexpress/models"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
-func AssignRole(c *gin.Context, db *storage.DB) {
+func AssignRole(c *gin.Context, db *data.DB) {
 	// Obtener el ID del usuario y el ID del rol de los parámetros de la solicitud
 	userID := c.Param("userID")
 	roleID := c.Param("roleID")
@@ -99,7 +99,7 @@ func AssignRole(c *gin.Context, db *storage.DB) {
 	})
 }
 
-func ListRoles(c *gin.Context, db *storage.DB) {
+func ListRoles(c *gin.Context, db *data.DB) {
 	// Obtener la lista de roles de la base de datos
 	rows, err := db.Query(`SELECT id, name FROM roles`)
 	if err != nil {
@@ -123,7 +123,7 @@ func ListRoles(c *gin.Context, db *storage.DB) {
 	})
 }
 
-func ActualizarRol(c *gin.Context, db *storage.DB) {
+func ActualizarRol(c *gin.Context, db *data.DB) {
 	// Obtener el ID del usuario y el ID del nuevo rol de los parámetros de la solicitud
 	userID := c.Param("userID")
 	newRoleID := c.Param("newRoleID")

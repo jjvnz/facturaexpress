@@ -3,8 +3,8 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"facturaexpress/pkg/models"
-	"facturaexpress/pkg/storage"
+	"facturaexpress/data"
+	"facturaexpress/models"
 	"fmt"
 	"math"
 	"net/http"
@@ -26,7 +26,7 @@ func unmarshalServicios(data []byte) ([]models.Servicio, error) {
 	return servicios, nil
 }
 
-func ListarFacturas(c *gin.Context, db *storage.DB) {
+func ListarFacturas(c *gin.Context, db *data.DB) {
 	// Obtener el rol del usuario del token JWT
 	claims := c.MustGet("claims").(*models.Claims)
 	rol := claims.Role
@@ -167,7 +167,7 @@ func ListarFacturas(c *gin.Context, db *storage.DB) {
 	}
 }
 
-func CrearFactura(c *gin.Context, db *storage.DB) {
+func CrearFactura(c *gin.Context, db *data.DB) {
 	// Obtener el rol del usuario del token JWT
 	claims := c.MustGet("claims").(*models.Claims)
 	rol := claims.Role
@@ -221,7 +221,7 @@ func CrearFactura(c *gin.Context, db *storage.DB) {
 }
 
 // obtenerUsuarioIDFactura consulta la base de datos para obtener el ID del usuario asociado a la factura especificada
-func obtenerUsuarioIDFactura(db *storage.DB, idFactura string) (int64, error) {
+func obtenerUsuarioIDFactura(db *data.DB, idFactura string) (int64, error) {
 	var idUsuarioFactura int64
 	err := db.QueryRow("SELECT usuario_id FROM facturas WHERE id = $1", idFactura).Scan(&idUsuarioFactura)
 	if err != nil {
@@ -230,7 +230,7 @@ func obtenerUsuarioIDFactura(db *storage.DB, idFactura string) (int64, error) {
 	return idUsuarioFactura, nil
 }
 
-func ActualizarFactura(c *gin.Context, db *storage.DB) {
+func ActualizarFactura(c *gin.Context, db *data.DB) {
 	// Obtener el rol y el ID del usuario del token JWT
 	claims := c.MustGet("claims").(*models.Claims)
 	rol := claims.Role
@@ -328,7 +328,7 @@ func ActualizarFactura(c *gin.Context, db *storage.DB) {
 	}
 }
 
-func EliminarFactura(c *gin.Context, db *storage.DB) {
+func EliminarFactura(c *gin.Context, db *data.DB) {
 	// Obtener el rol del usuario del token JWT
 	claims := c.MustGet("claims").(*models.Claims)
 	rol := claims.Role
@@ -376,7 +376,7 @@ func EliminarFactura(c *gin.Context, db *storage.DB) {
 	}
 }
 
-func obtenerFactura(c *gin.Context, db *storage.DB) (models.Factura, error) {
+func obtenerFactura(c *gin.Context, db *data.DB) (models.Factura, error) {
 	// Obtener el ID de la factura a partir del parámetro de la URL
 	id := c.Param("id")
 
@@ -407,7 +407,7 @@ func obtenerFactura(c *gin.Context, db *storage.DB) (models.Factura, error) {
 	return factura, nil
 }
 
-func GenerarPDF(c *gin.Context, db *storage.DB) {
+func GenerarPDF(c *gin.Context, db *data.DB) {
 	// Obtener el ID de la factura a partir del parámetro de la URL
 	id := c.Param("id")
 
@@ -438,7 +438,7 @@ func GenerarPDF(c *gin.Context, db *storage.DB) {
 
 	// Crear un nuevo documento PDF
 	pdf := gofpdf.New("P", "mm", "A4", "")
-	pdf.AddUTF8Font("DejaVuSans", "", "../../font/DejaVuSans.ttf")
+	pdf.AddUTF8Font("DejaVuSans", "", "./font/DejaVuSans.ttf")
 	pdf.AddPage()
 
 	// Agregar información de la factura

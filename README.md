@@ -26,32 +26,31 @@ La estructura escojida para el proyecto es la siguiente:
 
 ```
 facturaexpress/
-|── api/
-|    |── handlers/
-|    |    |── factura.go
-|    |    |── login.go
-|    |    |── registro.go
-|    |    └── welcome.go
-|    └── middleware/
-|    |    └── auth.go
-|    └── router.go
-├── cmd/
-|    └── server/
-|        ├── .env
-|        └── main.go
+├── data/
+│   └── db.go
 ├── font/
-|    └── DejaVuSans.ttf
-├── pkg/
-|    ├── models/
-|    |    ├── claims.go
-|    |    ├── factura.go
-|    |    └── usuario.go
-|    └── storage/
-|        └── db.go
+│   └── DejaVuSans.ttf
+├── handlers/
+│   ├── factura.go
+│   ├── login.go
+│   ├── registro.go
+│   └── roles.go
+├── middlewares/
+│   └── auth.go
+├── models/
+│   ├── claims.go
+│   ├── error.go
+│   ├── factura.go
+│   ├── roles.go
+│   └── usuario.go
+├── routes/
+│   └── router.go
+├── .env
 ├── .gitignore
-├── README.md
 ├── go.mod
-└── go.sum
+├── go.sum
+├── main.go
+└── README.md
 ```
 
 - La carpeta `api` contiene todo el código relacionado con la API, incluidos los controladores en la subcarpeta `handlers`, el middleware en la subcarpeta `middleware` y el enrutador en el archivo `router.go`.

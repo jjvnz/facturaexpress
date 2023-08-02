@@ -3,8 +3,8 @@ package handlers
 import (
 	"database/sql"
 	"errors"
-	"facturaexpress/pkg/models"
-	"facturaexpress/pkg/storage"
+	"facturaexpress/data"
+	"facturaexpress/models"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,7 +17,7 @@ import (
 )
 
 // Login handles user login and token generation.
-func Login(c *gin.Context, db *storage.DB, jwtKey []byte) {
+func Login(c *gin.Context, db *data.DB, jwtKey []byte) {
 	var loginData models.LoginData
 	if err := c.ShouldBindJSON(&loginData); err != nil {
 		sendResponse(c, http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -62,7 +62,7 @@ func Login(c *gin.Context, db *storage.DB, jwtKey []byte) {
 }
 
 // verifyCredentials verifies the user's email and password.
-func verifyCredentials(db *storage.DB, correo string, password string) (models.Usuario, error) {
+func verifyCredentials(db *data.DB, correo string, password string) (models.Usuario, error) {
 	var user models.Usuario
 	stmt, err := db.Prepare(`SELECT usuarios.id, usuarios.nombre_usuario, usuarios.password, roles.name
 		FROM usuarios

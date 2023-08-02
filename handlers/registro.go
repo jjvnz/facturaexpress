@@ -1,15 +1,15 @@
 package handlers
 
 import (
-	"facturaexpress/pkg/models"
-	"facturaexpress/pkg/storage"
+	"facturaexpress/data"
+	"facturaexpress/models"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func Register(c *gin.Context, db *storage.DB) {
+func Register(c *gin.Context, db *data.DB) {
 	var user models.Usuario
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

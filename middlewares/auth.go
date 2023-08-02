@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"database/sql"
-	"facturaexpress/pkg/models"
-	"facturaexpress/pkg/storage"
+	"facturaexpress/data"
+	"facturaexpress/models"
 	"net/http"
 	"strings"
 
@@ -11,7 +11,7 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-func AuthMiddleware(c *gin.Context, db *storage.DB, jwtKey []byte) {
+func AuthMiddleware(c *gin.Context, db *data.DB, jwtKey []byte) {
 	// Extrae el token JWT del encabezado Authorization
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
@@ -70,7 +70,7 @@ func AuthMiddleware(c *gin.Context, db *storage.DB, jwtKey []byte) {
 	c.Next()
 }
 
-func RoleAuthMiddleware(c *gin.Context, db *storage.DB, role string) {
+func RoleAuthMiddleware(c *gin.Context, db *data.DB, role string) {
 	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
 	claims := c.MustGet("claims").(*models.Claims)
 	userID := claims.UsuarioID
