@@ -168,16 +168,9 @@ func ListarFacturas(c *gin.Context, db *data.DB) {
 }
 
 func CrearFactura(c *gin.Context, db *data.DB) {
-	// Obtener el rol del usuario del token JWT
+	// Obtener el idUsuario del token JWT
 	claims := c.MustGet("claims").(*models.Claims)
-	rol := claims.Role
-
-	rolesPermitidos := []string{"administrador", "usuario"}
-	if !verificarRol(rol, rolesPermitidos) {
-		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página.")
-		c.JSON(http.StatusForbidden, errorResponse)
-		return
-	}
+	idUsuario := claims.UsuarioID
 
 	var factura models.Factura
 	if err := c.BindJSON(&factura); err != nil {
@@ -208,7 +201,7 @@ func CrearFactura(c *gin.Context, db *data.DB) {
 		factura.Operador.NumeroCuentaBancaria,
 		factura.Operador.TipoCuentaBancaria,
 		factura.Operador.Banco,
-		factura.UsuarioID).Scan(&factura.ID)
+		idUsuario).Scan(&factura.ID)
 
 	if err != nil {
 		errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al procesar las facturas")
@@ -216,6 +209,9 @@ func CrearFactura(c *gin.Context, db *data.DB) {
 		c.Abort()
 		return
 	}
+
+	// Actualizar el objeto factura con el idUsuario correcto
+	factura.UsuarioID = idUsuario
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Factura creada correctamente", "factura": factura})
 }
@@ -289,7 +285,7 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
 
 	// Verificar si el usuario existe
 	var existeUsuario bool
-	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM usuarios WHERE id = $1)", factura.UsuarioID).Scan(&existeUsuario)
+	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM usuarios WHERE id = $1)", idUsuario).Scan(&existeUsuario)
 	if err != nil {
 		errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al verificar si el usuario existe.")
 		c.JSON(http.StatusInternalServerError, errorResponse)
@@ -313,13 +309,16 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
     numero_cuenta_bancaria_operador = $11,
     tipo_cuenta_bancaria_operador = $12,
     banco_operador = $13, usuario_id=$14 WHERE id = $15`
-	result, err := db.Exec(query, factura.Empresa.Nombre, factura.Empresa.NIT, factura.Fecha, serviciosJSON, factura.ValorTotal, factura.Operador.Nombre, factura.Operador.TipoDocumento, factura.Operador.Documento, factura.Operador.CiudadExpedicionDocumento, factura.Operador.Celular, factura.Operador.NumeroCuentaBancaria, factura.Operador.TipoCuentaBancaria, factura.Operador.Banco, factura.UsuarioID, idFactura)
+	result, err := db.Exec(query, factura.Empresa.Nombre, factura.Empresa.NIT, factura.Fecha, serviciosJSON, factura.ValorTotal, factura.Operador.Nombre, factura.Operador.TipoDocumento, factura.Operador.Documento, factura.Operador.CiudadExpedicionDocumento, factura.Operador.Celular, factura.Operador.NumeroCuentaBancaria, factura.Operador.TipoCuentaBancaria, factura.Operador.Banco, idUsuario, idFactura)
 	if err != nil {
 		errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al actualizar la factura en la base de datos.")
 		c.JSON(http.StatusInternalServerError, errorResponse)
 		c.Abort()
 		return
 	}
+
+	// Actualizar el objeto factura con el idUsuario correcto
+	factura.UsuarioID = idUsuario
 
 	if rowsAffected, _ := result.RowsAffected(); rowsAffected > 0 {
 		c.JSON(http.StatusOK, gin.H{"message": "Factura actualizada correctamente"})
@@ -329,9 +328,10 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
 }
 
 func EliminarFactura(c *gin.Context, db *data.DB) {
-	// Obtener el rol del usuario del token JWT
+	// Obtener el rol y usuario_id del usuario del token JWT
 	claims := c.MustGet("claims").(*models.Claims)
 	rol := claims.Role
+	idUsuario := claims.UsuarioID
 
 	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
 	rolesPermitidos := []string{"administrador", "usuario"}
@@ -358,8 +358,19 @@ func EliminarFactura(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	query := `DELETE FROM facturas WHERE id = $1`
-	result, err := db.Exec(query, id)
+	var query string
+	if rol == "administrador" {
+		query = `DELETE FROM facturas WHERE id = $1`
+	} else {
+		query = `DELETE FROM facturas WHERE id = $1 AND usuario_id = $2`
+	}
+
+	var result sql.Result
+	if rol == "administrador" {
+		result, err = db.Exec(query, id)
+	} else {
+		result, err = db.Exec(query, id, idUsuario)
+	}
 	if err != nil {
 		errorResponse := models.ErrorResponseInit("SQL_ERROR", "Error al ejecutar la consulta SQL")
 		c.JSON(http.StatusInternalServerError, errorResponse)
@@ -370,7 +381,7 @@ func EliminarFactura(c *gin.Context, db *data.DB) {
 	if rowsAffected, _ := result.RowsAffected(); rowsAffected > 0 {
 		c.JSON(http.StatusOK, gin.H{"message": "Factura eliminada correctamente"})
 	} else {
-		errorResponse := models.ErrorResponseInit("NOT_FOUND", "No se encontró la factura con el ID especificado")
+		errorResponse := models.ErrorResponseInit("NOT_FOUND", "No se encontró la factura con el ID especificado o no tienes permiso para eliminarla")
 		c.JSON(http.StatusNotFound, errorResponse)
 		c.Abort()
 	}
@@ -414,6 +425,7 @@ func GenerarPDF(c *gin.Context, db *data.DB) {
 	// Obtener el rol del usuario del token JWT
 	claims := c.MustGet("claims").(*models.Claims)
 	rol := claims.Role
+	idUsuario := claims.UsuarioID
 
 	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
 	rolesPermitidos := []string{"administrador", "usuario"}
@@ -434,6 +446,14 @@ func GenerarPDF(c *gin.Context, db *data.DB) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+	}
+
+	// Verificar si el usuario es el dueño de la factura
+	if factura.UsuarioID != idUsuario {
+		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para generar el archivo PDF de esta factura.")
+		c.JSON(http.StatusForbidden, errorResponse)
+		c.Abort()
+		return
 	}
 
 	// Crear un nuevo documento PDF
