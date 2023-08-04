@@ -70,8 +70,8 @@ func ListarFacturas(c *gin.Context, db *data.DB) {
 	var query string
 	var args []interface{}
 	if filterField != "" && filterValue != "" {
-		query = `SELECT * FROM facturas WHERE $1 = $2 ORDER BY id ASC LIMIT $3 OFFSET $4`
-		args = []interface{}{filterField, filterValue, limit, offset}
+		query = fmt.Sprintf(`SELECT * FROM facturas WHERE %s = $1 ORDER BY id ASC LIMIT $2 OFFSET $3`, filterField)
+		args = []interface{}{filterValue, limit, offset}
 	} else {
 		if rol == "administrador" {
 			query = `SELECT * FROM facturas ORDER BY id ASC LIMIT $1 OFFSET $2`
@@ -175,7 +175,7 @@ func CrearFactura(c *gin.Context, db *data.DB) {
 	idUsuario := claims.UsuarioID
 
 	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
-	if !verificarRol(rol, []string{"usuario"}) {
+	if !verificarRol(rol, []string{"administrador", "usuario"}) {
 		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página.")
 		c.JSON(http.StatusForbidden, errorResponse)
 		return
@@ -250,23 +250,26 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	// Verificar si el usuario está intentando actualizar su propia factura
-	idUsuarioFactura, err := obtenerUsuarioIDFactura(db, idFactura)
-	if err != nil {
-		errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al obtener el ID del usuario de la factura.")
-		c.JSON(http.StatusInternalServerError, errorResponse)
-		c.Abort()
-		return
-	}
-	if idUsuario != idUsuarioFactura {
-		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "Solo puedes actualizar tus propias facturas.")
-		c.JSON(http.StatusForbidden, errorResponse)
-		c.Abort()
-		return
+	// Agregar una condición para permitir que el rol de "administrador" actualice cualquier factura
+	if rol != "administrador" {
+		// Verificar si el usuario está intentando actualizar su propia factura
+		idUsuarioFactura, err := obtenerUsuarioIDFactura(db, idFactura)
+		if err != nil {
+			errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al obtener el ID del usuario de la factura.")
+			c.JSON(http.StatusInternalServerError, errorResponse)
+			c.Abort()
+			return
+		}
+		if idUsuario != idUsuarioFactura {
+			errorResponse := models.ErrorResponseInit("NO_PERMISSION", "Solo puedes actualizar tus propias facturas.")
+			c.JSON(http.StatusForbidden, errorResponse)
+			c.Abort()
+			return
+		}
 	}
 
 	var factura models.Factura
-	err = c.BindJSON(&factura)
+	err := c.BindJSON(&factura)
 	if err != nil {
 		errorResponse := models.ErrorResponseInit("INVALID_DATA", "Datos inválidos. Verifica y vuelve a intentarlo.")
 		c.JSON(http.StatusBadRequest, errorResponse)
@@ -330,7 +333,6 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
 		errorResponse := models.ErrorResponseInit("INVOICE_NOT_FOUND", "No se encontró la factura con el ID especificado")
 		c.JSON(http.StatusNotFound, errorResponse)
 	}
-
 }
 
 func EliminarFactura(c *gin.Context, db *data.DB) {

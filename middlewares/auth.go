@@ -75,6 +75,12 @@ func RoleAuthMiddleware(c *gin.Context, db *data.DB, role string) {
 	claims := c.MustGet("claims").(*models.Claims)
 	userID := claims.UsuarioID
 
+	// Agregar una condición para permitir que el rol de "administrador" acceda a la ruta
+	if claims.Role == "administrador" {
+		c.Next()
+		return
+	}
+
 	var userRole models.UserRole
 	stmt, err := db.Prepare(`SELECT user_id, role_id FROM user_roles JOIN roles ON user_roles.role_id = roles.id WHERE user_roles.user_id = $1 AND roles.name = $2`)
 	if err != nil {
