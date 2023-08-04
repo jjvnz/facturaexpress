@@ -6,7 +6,6 @@ import (
 	"facturaexpress/models"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,7 +14,7 @@ import (
 )
 
 // Login handles user login and token generation.
-func Login(c *gin.Context, db *data.DB, jwtKey []byte) {
+func Login(c *gin.Context, db *data.DB, jwtKey []byte, expTimeStr string) {
 	var loginData models.LoginData
 	if err := c.ShouldBindJSON(&loginData); err != nil {
 		errorResponse := models.ErrorResponseInit("BAD_REQUEST", "Error al leer los datos de inicio de sesión.")
@@ -35,7 +34,7 @@ func Login(c *gin.Context, db *data.DB, jwtKey []byte) {
 		return
 	}
 
-	tokenString, err := generateJWTToken(jwtKey, user.ID, user.Role)
+	tokenString, err := generateJWTToken(jwtKey, user.ID, user.Role, expTimeStr)
 	if err != nil {
 		log.Printf("%v", err)
 		errorResponse := models.ErrorResponseInit("JWT_GENERATION_ERROR", "No se pudo generar el token JWT debido a un problema interno")
@@ -92,8 +91,7 @@ func verifyCredentials(db *data.DB, correo string, password string) (models.Usua
 }
 
 // generateJWTToken generates a JWT token for the given user ID.
-func generateJWTToken(jwtKey []byte, usuarioID int64, role string) (string, error) {
-	expTimeStr := os.Getenv("JWT_EXP_TIME")
+func generateJWTToken(jwtKey []byte, usuarioID int64, role string, expTimeStr string) (string, error) {
 	expDuration, _ := time.ParseDuration(expTimeStr)
 	if expDuration == 0 {
 		expDuration = 24 * time.Hour //default value of 24 hours if not set in env variable or if there is an error parsing it.
