@@ -1,6 +1,8 @@
 package models
 
-import "time"
+import (
+	"time"
+)
 
 type Factura struct {
 	ID         int        `json:"id"`

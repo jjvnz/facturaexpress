@@ -1,23 +1,34 @@
 # FACTURAEXPRESS
 
-## Instalación del marco GIN
+FACTURAEXPRESS es una API escrita en Go que utiliza el marco GIN y la base de datos PostgreSQL. La API permite a los usuarios crear y gestionar facturas, con campos para información de la empresa, servicios, valor total y detalles del operador. También hay una tabla de usuarios para almacenar información de inicio de sesión y registro, incluye la funcionalidad de generar reportes de facturas en formato PDF.
 
-Para instalar el marco GIN en su proyecto Go, siga estos pasos:
+## Requisitos previos
 
-1. Cree un nuevo directorio para su proyecto y navegue hasta él:
+- Go 1.20
+- pgAdmin4
+- PostgreSQL
+
+## Instalación
+
+1. Clona este repositorio en tu máquina local.
+2. Navega hasta el directorio del proyecto.
+3. Ejecuta el comando `go mod tidy` para descargar y verificar todas las dependencias necesarias.
+
+## Configuración
+
+Crea un archivo `.env` en el directorio raíz del proyecto y agrega las siguientes variables de entorno:
+
 ```
-mkdir facturaexpress && cd facturaexpress
+DB_HOST= # Tu host de base de datos
+DB_PORT= # Tu puerto de base de datos
+DB_USER= # Tu usuario de base de datos
+DB_PASSWORD= # Tu contraseña de base de datos
+DB_NAME= # El nombre de tu base de datos
+JWT_SECRET_KEY= # Tu clave secreta para firmar tokens JWT
+JWT_EXP_TIME= # El tiempo de expiración para los tokens JWT (en segundos)
 ```
 
-2. Inicialice un nuevo módulo Go:
-```
-go mod init facturaexpress
-```
-
-3. Instale el paquete `gin-gonic/gin` usando el comando `go get`:
-```
-go get -u github.com/gin-gonic/gin
-```
+Asegúrate de reemplazar los valores con tus propios valores.
 
 ## Estructura del proyecto
 
@@ -26,38 +37,40 @@ La estructura escojida para el proyecto es la siguiente:
 
 ```
 facturaexpress/
-|── api/
-|    |── handlers/
-|    |    |── factura.go
-|    |    |── login.go
-|    |    |── registro.go
-|    |    └── welcome.go
-|    └── middleware/
-|    |    └── auth.go
-|    └── router.go
-├── cmd/
-|    └── server/
-|        ├── .env
-|        └── main.go
+├── data/
+│   └── db.go
 ├── font/
-|    └── DejaVuSans.ttf
-├── pkg/
-|    ├── models/
-|    |    ├── claims.go
-|    |    ├── factura.go
-|    |    └── usuario.go
-|    └── storage/
-|        └── db.go
+│   └── DejaVuSans.ttf
+├── handlers/
+│   ├── factura.go
+│   ├── login.go
+│   ├── registro.go
+│   └── roles.go
+├── middlewares/
+│   └── auth.go
+├── models/
+│   ├── claims.go
+│   ├── error.go
+│   ├── factura.go
+│   ├── roles.go
+│   └── usuario.go
+├── routes/
+│   └── router.go
+├── .env
 ├── .gitignore
-├── README.md
 ├── go.mod
-└── go.sum
+├── go.sum
+├── main.go
+└── README.md
 ```
 
-- La carpeta `api` contiene todo el código relacionado con la API, incluidos los controladores en la subcarpeta `handlers`, el middleware en la subcarpeta `middleware` y el enrutador en el archivo `router.go`.
-- La carpeta `cmd` contiene subcarpetas para cada comando ejecutable, y cada subcarpeta contiene un archivo `main.go` que define el comando. En este caso, solo hay un comando llamado `server` que inicia el servidor de la API.
-- La carpeta `pkg` contiene paquetes reutilizables que pueden ser importados por comandos en la carpeta `cmd`. En este ejemplo, hay dos paquetes: `models`, que contiene definiciones de modelos de datos, y `storage`, que contiene código para interactuar con la base de datos.
-- Los archivos `go.mod` y `go.sum` definen las dependencias del proyecto.
+- La carpeta `data` contiene el archivo `db.go` que interactúa con la base de datos.
+- La carpeta `font` contiene el archivo de fuente `DejaVuSans.ttf`.
+- La carpeta `handlers` contiene los controladores para las facturas, inicio de sesión, registro y roles.
+- La carpeta `middlewares` contiene el middleware de autenticación.
+- La carpeta `models` contiene las definiciones de modelos de datos para las reclamaciones, errores, facturas, roles y usuarios.
+- La carpeta `routes` contiene el archivo `router.go` que define las rutas de la API.
+- Los archivos `.env`, `.gitignore`, `go.mod`, `go.sum`, `main.go` y `README.md` son archivos de configuración y código principal del proyecto.
 
 ## Esquema de base de datos
 
@@ -97,3 +110,20 @@ CREATE TABLE usuarios (
 ```
 
 Este esquema incluye columnas para los campos en la estructura `Usuario`.
+
+## Ejecución
+
+Para ejecutar la aplicación, navega hasta el directorio del proyecto y ejecuta el comando `go run main.go`. Esto iniciará el servidor en el puerto especificado (por defecto es el puerto 8080).
+
+## Uso
+
+Una vez que el servidor esté en ejecución, puedes utilizar un cliente HTTP como Postman o cURL para enviar solicitudes a la API. Consulta la documentación de la API para obtener más información sobre los puntos finales disponibles y cómo utilizarlos.
+
+
+## Manejo de roles y permisos
+
+Tambien implementa un sistema de manejo de roles y permisos para controlar el acceso a ciertas funcionalidades de la API. Los usuarios pueden tener diferentes roles, como administrador o usuario regular, y cada rol tiene un conjunto de permisos asociados.
+
+## Autenticación JWT
+
+Se utiliza tokens JWT (JSON Web Tokens) para autenticar a los usuarios y proteger las rutas de la API. Cuando un usuario inicia sesión, se genera un token JWT que contiene información sobre el usuario y se envía al cliente. El cliente debe incluir este token antecedido por el prefijo 'Bearer '  y un espacio en las solicitudes posteriores para acceder a las rutas protegidas.

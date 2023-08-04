@@ -1,8 +1,8 @@
 package main
 
 import (
-	"facturaexpress/api"
-	"facturaexpress/pkg/storage"
+	"facturaexpress/data"
+	"facturaexpress/routes"
 	"log"
 	"os"
 
@@ -16,15 +16,15 @@ func main() {
 	// Carga la clave secreta para firmar los tokens JWT desde la variable de entorno
 	jwtKey := []byte(os.Getenv("JWT_SECRET_KEY"))
 
-	// Crea una nueva instancia de *storage.DB y conéctate a la base de datos
-	db, err := storage.NewDB()
+	// Crea una nueva instancia de *data.DB y conéctate a la base de datos
+	db, err := data.NewDB()
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
 
 	// Crea un nuevo enrutador Gin y configura las rutas y los controladores de ruta
-	router := api.NewRouter(db, jwtKey)
+	router := routes.NewRouter(db, jwtKey)
 
 	// Inicia el servidor Gin y escucha las solicitudes entrantes
 	router.Run(":8000")

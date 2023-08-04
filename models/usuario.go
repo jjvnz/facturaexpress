@@ -5,6 +5,7 @@ type Usuario struct {
 	NombreUsuario string `json:"nombre_usuario"`
 	Password      string `json:"password"`
 	Correo        string `json:"correo"`
+	Role          string `json:"role"`
 }
 
 type LoginData struct {
