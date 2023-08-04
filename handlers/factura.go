@@ -107,7 +107,8 @@ func ListarFacturas(c *gin.Context, db *data.DB) {
 
 		err := rows.Scan(&id, &nombreEmpresa, &nitEmpresa, &fecha, &servicios, &valorTotal, &nombreOperador, &tipoDocumento, &documento, &ciudadExpedicion, &celular, &numeroCuenta, &tipoCuenta, &banco, &usuarioID)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			errorResponse := models.ErrorResponseInit("DATABASE_ERROR", "Ocurrió un error al leer los datos de la base de datos")
+			c.JSON(http.StatusInternalServerError, errorResponse)
 			return
 		}
 
@@ -168,9 +169,17 @@ func ListarFacturas(c *gin.Context, db *data.DB) {
 }
 
 func CrearFactura(c *gin.Context, db *data.DB) {
-	// Obtener el idUsuario del token JWT
+	// Obtener el rol y el ID del usuario del token JWT
 	claims := c.MustGet("claims").(*models.Claims)
+	rol := claims.Role
 	idUsuario := claims.UsuarioID
+
+	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
+	if !verificarRol(rol, []string{"usuario"}) {
+		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página.")
+		c.JSON(http.StatusForbidden, errorResponse)
+		return
+	}
 
 	var factura models.Factura
 	if err := c.BindJSON(&factura); err != nil {
@@ -241,25 +250,23 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	// Si el rol del usuario es "usuario", verificar si está intentando actualizar su propia factura
-	if rol == "usuario" {
-		idUsuarioFactura, err := obtenerUsuarioIDFactura(db, idFactura)
-		if err != nil {
-			errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al obtener el ID del usuario de la factura.")
-			c.JSON(http.StatusInternalServerError, errorResponse)
-			c.Abort()
-			return
-		}
-		if idUsuario != idUsuarioFactura {
-			errorResponse := models.ErrorResponseInit("NO_PERMISSION", "El usuario solo puede actualizar sus propias facturas.")
-			c.JSON(http.StatusForbidden, errorResponse)
-			c.Abort()
-			return
-		}
+	// Verificar si el usuario está intentando actualizar su propia factura
+	idUsuarioFactura, err := obtenerUsuarioIDFactura(db, idFactura)
+	if err != nil {
+		errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al obtener el ID del usuario de la factura.")
+		c.JSON(http.StatusInternalServerError, errorResponse)
+		c.Abort()
+		return
+	}
+	if idUsuario != idUsuarioFactura {
+		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "Solo puedes actualizar tus propias facturas.")
+		c.JSON(http.StatusForbidden, errorResponse)
+		c.Abort()
+		return
 	}
 
 	var factura models.Factura
-	err := c.BindJSON(&factura)
+	err = c.BindJSON(&factura)
 	if err != nil {
 		errorResponse := models.ErrorResponseInit("INVALID_DATA", "Datos inválidos. Verifica y vuelve a intentarlo.")
 		c.JSON(http.StatusBadRequest, errorResponse)
@@ -300,16 +307,16 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
 	}
 
 	query := `UPDATE facturas SET nombre_empresa = $1,nit_empresa = $2,
-    fecha = $3,servicios = $4,
-    valor_total = $5,nombre_operador = $6,
-    tipo_documento_operador = $7,
-    documento_operador = $8,
-    ciudad_expedicion_documento_operador = $9,
-    celular_operador = $10,
-    numero_cuenta_bancaria_operador = $11,
-    tipo_cuenta_bancaria_operador = $12,
-    banco_operador = $13, usuario_id=$14 WHERE id = $15`
-	result, err := db.Exec(query, factura.Empresa.Nombre, factura.Empresa.NIT, factura.Fecha, serviciosJSON, factura.ValorTotal, factura.Operador.Nombre, factura.Operador.TipoDocumento, factura.Operador.Documento, factura.Operador.CiudadExpedicionDocumento, factura.Operador.Celular, factura.Operador.NumeroCuentaBancaria, factura.Operador.TipoCuentaBancaria, factura.Operador.Banco, idUsuario, idFactura)
+			fecha = $3,servicios = $4,
+			valor_total = $5,nombre_operador = $6,
+			tipo_documento_operador = $7,
+			documento_operador = $8,
+			ciudad_expedicion_documento_operador = $9,
+			celular_operador = $10,
+			numero_cuenta_bancaria_operador = $11,
+			tipo_cuenta_bancaria_operador = $12,
+			banco_operador = $13 WHERE id = $14`
+	result, err := db.Exec(query, factura.Empresa.Nombre, factura.Empresa.NIT, factura.Fecha, serviciosJSON, factura.ValorTotal, factura.Operador.Nombre, factura.Operador.TipoDocumento, factura.Operador.Documento, factura.Operador.CiudadExpedicionDocumento, factura.Operador.Celular, factura.Operador.NumeroCuentaBancaria, factura.Operador.TipoCuentaBancaria, factura.Operador.Banco, idFactura)
 	if err != nil {
 		errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al actualizar la factura en la base de datos.")
 		c.JSON(http.StatusInternalServerError, errorResponse)
@@ -317,14 +324,13 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	// Actualizar el objeto factura con el idUsuario correcto
-	factura.UsuarioID = idUsuario
-
 	if rowsAffected, _ := result.RowsAffected(); rowsAffected > 0 {
 		c.JSON(http.StatusOK, gin.H{"message": "Factura actualizada correctamente"})
 	} else {
-		c.JSON(http.StatusNotFound, gin.H{"error": "No se encontró la factura con el ID especificado"})
+		errorResponse := models.ErrorResponseInit("INVOICE_NOT_FOUND", "No se encontró la factura con el ID especificado")
+		c.JSON(http.StatusNotFound, errorResponse)
 	}
+
 }
 
 func EliminarFactura(c *gin.Context, db *data.DB) {
@@ -381,7 +387,7 @@ func EliminarFactura(c *gin.Context, db *data.DB) {
 	if rowsAffected, _ := result.RowsAffected(); rowsAffected > 0 {
 		c.JSON(http.StatusOK, gin.H{"message": "Factura eliminada correctamente"})
 	} else {
-		errorResponse := models.ErrorResponseInit("NOT_FOUND", "No se encontró la factura con el ID especificado o no tienes permiso para eliminarla")
+		errorResponse := models.ErrorResponseInit("INVOICE_NOT_FOUND", "No se encontró la factura con el ID especificado o no tienes permiso para eliminarla")
 		c.JSON(http.StatusNotFound, errorResponse)
 		c.Abort()
 	}
@@ -402,8 +408,9 @@ func obtenerFactura(c *gin.Context, db *data.DB) (models.Factura, error) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			// Manejar el caso en que no hay filas para escanear
-			return factura, fmt.Errorf("factura no encontrada")
+			//lint:ignore ST1005 Razón para ignorar la advertencia
+			return factura, fmt.Errorf("No se encontró la factura con el ID especificado.")
+
 		} else {
 			return factura, err
 		}
@@ -439,17 +446,17 @@ func GenerarPDF(c *gin.Context, db *data.DB) {
 	// Obtener la factura
 	factura, err := obtenerFactura(c, db)
 	if err != nil {
-		if err.Error() == "Factura no encontrada" {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "ID especificado.") {
+			c.JSON(http.StatusNotFound, models.ErrorResponseInit("INVOICE_NOT_FOUND", err.Error()))
 			return
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("INVOICE_NOT_FOUND", err.Error()))
 			return
 		}
 	}
 
-	// Verificar si el usuario es el dueño de la factura
-	if factura.UsuarioID != idUsuario {
+	// Verificar si el usuario es el dueño de la factura o si tiene el rol de administrador
+	if factura.UsuarioID != idUsuario && rol != "administrador" {
 		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para generar el archivo PDF de esta factura.")
 		c.JSON(http.StatusForbidden, errorResponse)
 		c.Abort()

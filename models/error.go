@@ -20,7 +20,7 @@ func (e *ErrorJson) DefaultErrorInit(title, timestamp, message, errorType, sourc
 	e.Source = source
 }
 
-func ErrorResponseInit(title, message string) ErrorJson {
+func ErrorResponseInit(title, message string) *ErrorJson {
 	var newError ErrorJson
 	newError.DefaultErrorInit(
 		title,
@@ -29,5 +29,9 @@ func ErrorResponseInit(title, message string) ErrorJson {
 		"genericError",
 		"internal",
 	)
-	return newError
+	return &newError
+}
+
+func (e *ErrorJson) Error() string {
+	return e.Message
 }

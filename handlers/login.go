@@ -2,10 +2,8 @@ package handlers
 
 import (
 	"database/sql"
-	"errors"
 	"facturaexpress/data"
 	"facturaexpress/models"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -20,16 +18,19 @@ import (
 func Login(c *gin.Context, db *data.DB, jwtKey []byte) {
 	var loginData models.LoginData
 	if err := c.ShouldBindJSON(&loginData); err != nil {
-		sendResponse(c, http.StatusBadRequest, gin.H{"error": err.Error()})
+		errorResponse := models.ErrorResponseInit("BAD_REQUEST", "Error al leer los datos de inicio de sesión.")
+		c.JSON(http.StatusBadRequest, errorResponse)
 		return
 	}
 
 	user, err := verifyCredentials(db, loginData.Correo, loginData.Password)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			sendResponse(c, http.StatusUnauthorized, gin.H{"error": "El correo electrónico ingresado no está registrado. Por favor, verifica que lo hayas escrito correctamente o regístrate para crear una cuenta."})
+			errorResponse := models.ErrorResponseInit("EMAIL_NOT_FOUND", "No se encontró ningún usuario con el correo electrónico que ingresaste")
+			c.JSON(http.StatusUnauthorized, errorResponse)
 		} else {
-			sendResponse(c, http.StatusUnauthorized, gin.H{"error": err.Error()})
+			errorResponse := models.ErrorResponseInit("INCORRECT_PASSWORD", "La contraseña que ingresaste es incorrecta")
+			c.JSON(http.StatusUnauthorized, errorResponse)
 		}
 		return
 	}
@@ -37,7 +38,8 @@ func Login(c *gin.Context, db *data.DB, jwtKey []byte) {
 	tokenString, err := generateJWTToken(jwtKey, user.ID, user.Role)
 	if err != nil {
 		log.Printf("%v", err)
-		sendResponse(c, http.StatusInternalServerError, gin.H{"error": "Error al generar el token JWT"})
+		errorResponse := models.ErrorResponseInit("JWT_GENERATION_ERROR", "No se pudo generar el token JWT debido a un problema interno")
+		c.JSON(http.StatusInternalServerError, errorResponse)
 		return
 	}
 
@@ -45,20 +47,21 @@ func Login(c *gin.Context, db *data.DB, jwtKey []byte) {
 	var stmt *sql.Stmt
 
 	// En tu función Login, después de generar el token JWT:
-	// En tu función Login, después de generar el token JWT:
 	stmt, err = db.Prepare(`UPDATE usuarios SET jwt_token = $1 WHERE id = $2`)
 	if err != nil {
-		sendResponse(c, http.StatusInternalServerError, gin.H{"error": "Error al almacenar el token JWT del usuario en la base de datos"})
+		errorResponse := models.ErrorResponseInit("JWT_STORAGE_ERROR", "Ocurrió un problema al intentar almacenar el token JWT del usuario en la base de datos")
+		c.JSON(http.StatusInternalServerError, errorResponse)
 		return // Agregar esta línea para detener la ejecución del código si ocurre un error
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(tokenString, user.ID)
 	if err != nil {
-		sendResponse(c, http.StatusInternalServerError, gin.H{"error": "Error al almacenar el token JWT del usuario en la base de datos"})
+		errorResponse := models.ErrorResponseInit("JWT_STORAGE_ERROR", "Ocurrió un problema al intentar almacenar el token JWT del usuario en la base de datos")
+		c.JSON(http.StatusInternalServerError, errorResponse)
 		return // Agregar esta línea para detener la ejecución del código si ocurre un error
 	}
 
-	sendResponse(c, http.StatusOK, gin.H{"message": "Inicio de sesión exitoso", "token": tokenString})
+	c.JSON(http.StatusOK, gin.H{"message": "Inicio de sesión exitoso", "token": tokenString})
 }
 
 // verifyCredentials verifies the user's email and password.
@@ -82,7 +85,7 @@ func verifyCredentials(db *data.DB, correo string, password string) (models.Usua
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
-		return user, errors.New("contraseña incorrecta. Por favor, inténtalo de nuevo")
+		return user, models.ErrorResponseInit("INCORRECT_PASSWORD", "La contraseña que ingresaste es incorrecta.")
 	}
 
 	return user, nil
@@ -106,12 +109,7 @@ func generateJWTToken(jwtKey []byte, usuarioID int64, role string) (string, erro
 	})
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
-		return "", fmt.Errorf("error al generar el token JWT: %v", err)
+		return "", models.ErrorResponseInit("ERROR_GENERATING_TOKEN", "Error al generar el token JWT.")
 	}
 	return tokenString, nil
-}
-
-// sendResponse sends a JSON response with the given status code and data.
-func sendResponse(c *gin.Context, statusCode int, data gin.H) {
-	c.JSON(statusCode, data)
 }
