@@ -2,10 +2,11 @@ package data
 
 import (
 	"database/sql"
+	"encoding/json"
+	"facturaexpress/models"
 	"fmt"
 	"os"
 
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -14,19 +15,26 @@ type DB struct {
 }
 
 func NewDB() (*DB, error) {
-	// Carga los valores del archivo .env
-	err := godotenv.Load()
+	// Carga los valores del archivo de configuración
+	configFile, err := os.ReadFile("config.json")
 	if err != nil {
-		return nil, fmt.Errorf("error al cargar el archivo .env: %v", err)
+		return nil, fmt.Errorf("error al cargar el archivo de configuración: %v", err)
 	}
-	host := os.Getenv("DB_HOST")
-	port := os.Getenv("DB_PORT")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	dbname := os.Getenv("DB_NAME")
+
+	var config models.DB
+	err = json.Unmarshal(configFile, &config)
+	if err != nil {
+		return nil, fmt.Errorf("error al leer el archivo de configuración: %v", err)
+	}
+
+	host := config.DB.Host
+	port := config.DB.Port
+	user := config.DB.User
+	password := config.DB.Password
+	dbname := config.DB.DBName
 
 	// Crea la cadena de conexión a la base de datos
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
 
 	// Abre una conexión a la base de datos

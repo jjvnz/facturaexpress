@@ -56,8 +56,8 @@ facturaexpress/
 │   └── usuario.go
 ├── routes/
 │   └── router.go
-├── .env
 ├── .gitignore
+├── config.json
 ├── go.mod
 ├── go.sum
 ├── main.go
@@ -70,7 +70,7 @@ facturaexpress/
 - La carpeta `middlewares` contiene el middleware de autenticación.
 - La carpeta `models` contiene las definiciones de modelos de datos para las reclamaciones, errores, facturas, roles y usuarios.
 - La carpeta `routes` contiene el archivo `router.go` que define las rutas de la API.
-- Los archivos `.env`, `.gitignore`, `go.mod`, `go.sum`, `main.go` y `README.md` son archivos de configuración y código principal del proyecto.
+- Los archivos `.gitignore`, `config.json`, `go.mod`, `go.sum`, `main.go` y `README.md` son archivos de configuración y código principal del proyecto.
 
 ## Esquema de base de datos
 
