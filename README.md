@@ -16,16 +16,22 @@ FACTURAEXPRESS es una API escrita en Go que utiliza el marco GIN y la base de da
 
 ## Configuración
 
-Crea un archivo `.env` en el directorio raíz del proyecto y agrega las siguientes variables de entorno:
+Crea un archivo `config.json` en el directorio raíz del proyecto y agrega las siguientes variables de entorno:
 
-```
-DB_HOST= # Tu host de base de datos
-DB_PORT= # Tu puerto de base de datos
-DB_USER= # Tu usuario de base de datos
-DB_PASSWORD= # Tu contraseña de base de datos
-DB_NAME= # El nombre de tu base de datos
-JWT_SECRET_KEY= # Tu clave secreta para firmar tokens JWT
-JWT_EXP_TIME= # El tiempo de expiración para los tokens JWT (en segundos)
+```json
+{
+    "db": {
+        "host": "Tu host de base de datos",
+        "port": "Tu puerto de base de datos",
+        "user": "Tu usuario de base de datos",
+        "password": "Tu contraseña de base de datos",
+        "dbname": "El nombre de tu base de datos"
+    },
+    "jwt": {
+        "secret_key": "Tu clave secreta para firmar tokens JWT",
+        "exp_time": "El tiempo de expiración para los tokens JWT (en segundos)"
+    }
+}
 ```
 
 Asegúrate de reemplazar los valores con tus propios valores.
