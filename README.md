@@ -16,7 +16,7 @@ FACTURAEXPRESS es una API escrita en Go que utiliza el marco GIN y la base de da
 
 ## Configuración
 
-Crea un archivo `config.json` en el directorio raíz del proyecto y agrega las siguientes variables de entorno:
+Crea un archivo `config.json` en el directorio raíz del proyecto y agrega las siguientes variables:
 
 ```json
 {
@@ -43,6 +43,8 @@ La estructura escojida para el proyecto es la siguiente:
 
 ```
 facturaexpress/
+├── common/
+|       └── constant.go
 ├── data/
 │   └── db.go
 ├── font/
@@ -69,7 +71,7 @@ facturaexpress/
 ├── main.go
 └── README.md
 ```
-
+- La carpeta `common` contiene el archivo `constant.go` en él se definen constantes requeridas en el proyecto como "ADMIN" y "USER" etc.
 - La carpeta `data` contiene el archivo `db.go` que interactúa con la base de datos.
 - La carpeta `font` contiene el archivo de fuente `DejaVuSans.ttf`.
 - La carpeta `handlers` contiene los controladores para las facturas, inicio de sesión, registro y roles.
