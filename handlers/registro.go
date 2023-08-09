@@ -9,96 +9,88 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Register maneja el registro de usuarios.
 func Register(c *gin.Context, db *data.DB) {
 	var user models.Usuario
 	if err := c.ShouldBindJSON(&user); err != nil {
-		errorResponse := models.ErrorResponseInit("JSON_BINDING_FAILED", "Error al procesar los datos del usuario.")
-		c.JSON(http.StatusBadRequest, errorResponse)
-		c.Abort()
+		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("JSON_BINDING_FAILED", "Error al procesar los datos del usuario."))
 		return
 	}
 
-	stmt, err := db.Prepare("SELECT COUNT(*) FROM usuarios WHERE nombre_usuario = $1 OR correo = $2")
-	if err != nil {
-		errorResponse := models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta.")
-		c.JSON(http.StatusInternalServerError, errorResponse)
-		c.Abort()
-		return
-	}
-	defer stmt.Close()
-	row := stmt.QueryRow(user.NombreUsuario, user.Correo)
-	var count int
-	err = row.Scan(&count)
-	if err != nil {
-		errorResponse := models.ErrorResponseInit("USERNAME_EMAIL_VERIFICATION_FAILED", "Error al verificar el nombre de usuario y el correo electrónico.")
-		c.JSON(http.StatusInternalServerError, errorResponse)
-		c.Abort()
-		return
-	}
-	if count > 0 {
-		errorResponse := models.ErrorResponseInit("USERNAME_OR_EMAIL_IN_USE", "El nombre de usuario o el correo electrónico ya están en uso.")
-		c.JSON(http.StatusBadRequest, errorResponse)
+	if err := checkUsernameEmail(db, user.NombreUsuario, user.Correo); err != nil {
+		c.JSON(http.StatusBadRequest, err)
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		errorResponse := models.ErrorResponseInit("PASSWORD_HASHING_FAILED", "Error al hashear la contraseña.")
-		c.JSON(http.StatusInternalServerError, errorResponse)
-		c.Abort()
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("PASSWORD_HASHING_FAILED", "Error al hashear la contraseña."))
 		return
 	}
 
-	stmt, err = db.Prepare(`INSERT INTO usuarios (nombre_usuario, password, correo) VALUES ($1, $2, $3) RETURNING id`)
+	userID, err := saveUser(db, user.NombreUsuario, hashedPassword, user.Correo)
 	if err != nil {
-		errorResponse := models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta.")
-		c.JSON(http.StatusInternalServerError, errorResponse)
-		c.Abort()
-		return
-	}
-	defer stmt.Close()
-	var userID int64
-	err = stmt.QueryRow(user.NombreUsuario, hashedPassword, user.Correo).Scan(&userID)
-	if err != nil {
-		errorResponse := models.ErrorResponseInit("DATABASE_SAVE_FAILED", "Error al guardar en la base de datos.")
-		c.JSON(http.StatusInternalServerError, errorResponse)
-		c.Abort()
+		c.JSON(http.StatusInternalServerError, err)
 		return
 	}
 
-	stmt, err = db.Prepare(`SELECT id FROM roles WHERE name=$1`)
-	if err != nil {
-		errorResponse := models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta.")
-		c.JSON(http.StatusInternalServerError, errorResponse)
-		c.Abort()
-		return
-	}
-	defer stmt.Close()
-	row = stmt.QueryRow("usuario")
-	var roleID int64
-	err = row.Scan(&roleID)
-	if err != nil {
-		errorResponse := models.ErrorResponseInit("ROLE_ID_RETRIEVAL_FAILED", "Error al obtener el ID del rol.")
-		c.JSON(http.StatusInternalServerError, errorResponse)
-		c.Abort()
-		return
-	}
-
-	stmt, err = db.Prepare(`INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`)
-	if err != nil {
-		errorResponse := models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta.")
-		c.JSON(http.StatusInternalServerError, errorResponse)
-		c.Abort()
-		return
-	}
-	defer stmt.Close()
-	_, err = stmt.Exec(userID, roleID)
-	if err != nil {
-		errorResponse := models.ErrorResponseInit("DATABASE_SAVE_FAILED", "Error al guardar en la base de datos.")
-		c.JSON(http.StatusInternalServerError, errorResponse)
-		c.Abort()
+	if err := saveUserRole(db, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, err)
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Usuario registrado con éxito."})
+}
+
+// checkUsernameEmail verifica si el nombre de usuario o el correo electrónico ya están en uso.
+func checkUsernameEmail(db *data.DB, username string, email string) error {
+	stmt, err := db.Prepare("SELECT COUNT(*) FROM usuarios WHERE nombre_usuario = $1 OR correo = $2")
+	if err != nil {
+		return models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta.")
+	}
+	defer stmt.Close()
+	row := stmt.QueryRow(username, email)
+	var count int
+	if err = row.Scan(&count); err != nil || count > 0 {
+		return models.ErrorResponseInit("USERNAME_OR_EMAIL_IN_USE", "El nombre de usuario o el correo electrónico ya están en uso.")
+	}
+	return nil
+}
+
+// saveUser guarda al usuario en la base de datos y devuelve su ID.
+func saveUser(db *data.DB, username string, hashedPassword []byte, email string) (int64, error) {
+	stmt, err := db.Prepare(`INSERT INTO usuarios (nombre_usuario, password, correo) VALUES ($1, $2, $3) RETURNING id`)
+	if err != nil {
+		return 0, models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta.")
+	}
+	defer stmt.Close()
+	var userID int64
+	if err = stmt.QueryRow(username, hashedPassword, email).Scan(&userID); err != nil {
+		return 0, models.ErrorResponseInit("DATABASE_SAVE_FAILED", "Error al guardar en la base de datos.")
+	}
+	return userID, nil
+}
+
+// saveUserRole guarda el rol del usuario en la base de datos.
+func saveUserRole(db *data.DB, userID int64) error {
+	stmt, err := db.Prepare(`SELECT id FROM roles WHERE name=$1`)
+	if err != nil {
+		return models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta.")
+	}
+	defer stmt.Close()
+	row := stmt.QueryRow("usuario")
+	var roleID int64
+	if err = row.Scan(&roleID); err != nil {
+		return models.ErrorResponseInit("ROLE_ID_RETRIEVAL_FAILED", "Error al obtener el ID del rol.")
+	}
+
+	stmt, err = db.Prepare(`INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`)
+	if err != nil {
+		return models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta.")
+	}
+	defer stmt.Close()
+	if _, err = stmt.Exec(userID, roleID); err != nil {
+		return models.ErrorResponseInit("DATABASE_SAVE_FAILED", "Error al guardar en la base de datos.")
+	}
+	return nil
 }
