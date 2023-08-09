@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"facturaexpress/common"
 	"facturaexpress/data"
 	handler "facturaexpress/handlers"
 	middleware "facturaexpress/middlewares"
@@ -37,7 +38,7 @@ func NewRouter(db *data.DB, jwtKey []byte, expTimeStr string) *gin.Engine {
 		{
 			adminRoutes := authorized.Group("/")
 			adminRoutes.Use(func(c *gin.Context) {
-				middleware.RoleAuthMiddleware(c, db, "administrador")
+				middleware.RoleAuthMiddleware(c, db, common.ADMIN)
 			})
 
 			adminRoutes.PUT("/users/:userID/roles/:roleID", func(c *gin.Context) {
@@ -72,6 +73,12 @@ func NewRouter(db *data.DB, jwtKey []byte, expTimeStr string) *gin.Engine {
 			authorized.GET("/facturas/:id/pdf", func(c *gin.Context) {
 				handler.GenerarPDF(c, db)
 			})
+
+			// En tu archivo router.go, agrega una nueva ruta para manejar solicitudes de logout
+			authorized.POST("/logout", func(c *gin.Context) {
+				handler.Logout(c, db)
+			})
+
 		}
 	}
 

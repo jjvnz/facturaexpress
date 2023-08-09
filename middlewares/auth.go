@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"database/sql"
+	"facturaexpress/common"
 	"facturaexpress/data"
 	"facturaexpress/models"
 	"net/http"
@@ -37,34 +38,31 @@ func AuthMiddleware(c *gin.Context, db *data.DB, jwtKey []byte) {
 	}
 
 	// En tu middleware AuthMiddleware, después de verificar la firma y validar los claims del token JWT:
-	tokenString := c.GetHeader("Authorization")
-	if tokenString != "" {
-		stmt, err := db.Prepare(`SELECT COUNT(*) FROM jwt_blacklist WHERE token = $1`)
-		if err != nil {
-			errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al preparar la consulta")
-			c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse)
-			c.Abort()
-			return
-		}
-		defer stmt.Close()
-		var count int
-		err = stmt.QueryRow(tokenString).Scan(&count)
-		if err != nil {
-			errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al verificar si el token está en la lista negra")
-			c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse)
-			c.Abort()
-			return
-		}
-		if count > 0 {
-			errorResponse := models.ErrorResponseInit("INVALID_TOKEN", "Token inválido. Verifica o solicita uno nuevo.")
-			c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse)
-			c.Abort()
-			return
-		}
+	tokenString := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
+	stmt, err := db.Prepare(`SELECT COUNT(*) FROM jwt_blacklist WHERE token = $1`)
+	if err != nil {
+		errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al preparar la consulta")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse)
+		c.Abort()
+		return
+	}
+	defer stmt.Close()
+	var count int
+	err = stmt.QueryRow(tokenString).Scan(&count)
+	if err != nil {
+		errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al verificar si el token está en la lista negra")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse)
+		c.Abort()
+		return
+	}
+	if count > 0 {
+		errorResponse := models.ErrorResponseInit("INVALID_TOKEN", "Token inválido. Verifica o solicita uno nuevo.")
+		c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse)
+		c.Abort()
+		return
 	}
 
 	// Establece los claims en el contexto de Gin
-	//c.Set("usuario_id", claims.UsuarioID)
 	c.Set("claims", claims)
 
 	c.Next()
@@ -75,8 +73,8 @@ func RoleAuthMiddleware(c *gin.Context, db *data.DB, role string) {
 	claims := c.MustGet("claims").(*models.Claims)
 	userID := claims.UsuarioID
 
-	// Agregar una condición para permitir que el rol de "administrador" acceda a la ruta
-	if claims.Role == "administrador" {
+	// Agregar una condición para permitir que el rol de ADMIN acceda a la ruta
+	if claims.Role == common.ADMIN {
 		c.Next()
 		return
 	}

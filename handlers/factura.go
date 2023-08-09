@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"facturaexpress/common"
 	"facturaexpress/data"
 	"facturaexpress/models"
 	"fmt"
@@ -32,8 +33,8 @@ func ListarFacturas(c *gin.Context, db *data.DB) {
 	rol := claims.Role
 
 	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
-	if rol != "administrador" && rol != "usuario" {
-		errorResponse := models.ErrorResponseInit("INSUFFICIENT_ROLE", "Lo siento, pero parece que no tienes los permisos necesarios para acceder a esta página. Por favor, verifica tus credenciales o contacta al administrador para obtener más información.")
+	if rol != common.ADMIN && rol != common.USER {
+		errorResponse := models.ErrorResponseInit("INSUFFICIENT_ROLE", "Lo siento, pero parece que no tienes los permisos necesarios para acceder a esta página. Por favor, verifica tus credenciales o contacta al ADMIN para obtener más información.")
 		c.AbortWithStatusJSON(http.StatusForbidden, errorResponse)
 		return
 	}
@@ -73,7 +74,7 @@ func ListarFacturas(c *gin.Context, db *data.DB) {
 		query = fmt.Sprintf(`SELECT * FROM facturas WHERE %s = $1 ORDER BY id ASC LIMIT $2 OFFSET $3`, filterField)
 		args = []interface{}{filterValue, limit, offset}
 	} else {
-		if rol == "administrador" {
+		if rol == common.ADMIN {
 			query = `SELECT * FROM facturas ORDER BY id ASC LIMIT $1 OFFSET $2`
 			args = []interface{}{limit, offset}
 		} else {
@@ -144,7 +145,7 @@ func ListarFacturas(c *gin.Context, db *data.DB) {
 			query = `SELECT COUNT(*) FROM facturas WHERE $1 = $2`
 			args = []interface{}{filterField, filterValue}
 		} else {
-			if rol == "administrador" {
+			if rol == common.ADMIN {
 				query = `SELECT COUNT(*) FROM facturas`
 				args = []interface{}{}
 			} else {
@@ -175,7 +176,7 @@ func CrearFactura(c *gin.Context, db *data.DB) {
 	idUsuario := claims.UsuarioID
 
 	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
-	if !verificarRol(rol, []string{"administrador", "usuario"}) {
+	if !verificarRol(rol, []string{common.ADMIN, common.USER}) {
 		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página.")
 		c.JSON(http.StatusForbidden, errorResponse)
 		return
@@ -243,15 +244,15 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
 	idFactura := c.Param("id")
 
 	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
-	if !verificarRol(rol, []string{"administrador", "usuario"}) {
+	if !verificarRol(rol, []string{common.ADMIN, common.USER}) {
 		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página.")
 		c.JSON(http.StatusForbidden, errorResponse)
 		c.Abort()
 		return
 	}
 
-	// Agregar una condición para permitir que el rol de "administrador" actualice cualquier factura
-	if rol != "administrador" {
+	// Agregar una condición para permitir que el rol de common.ADMIN actualice cualquier factura
+	if rol != common.ADMIN {
 		// Verificar si el usuario está intentando actualizar su propia factura
 		idUsuarioFactura, err := obtenerUsuarioIDFactura(db, idFactura)
 		if err != nil {
@@ -342,7 +343,7 @@ func EliminarFactura(c *gin.Context, db *data.DB) {
 	idUsuario := claims.UsuarioID
 
 	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
-	rolesPermitidos := []string{"administrador", "usuario"}
+	rolesPermitidos := []string{common.ADMIN, common.USER}
 	if !verificarRol(rol, rolesPermitidos) {
 		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página.")
 		c.JSON(http.StatusForbidden, errorResponse)
@@ -367,14 +368,14 @@ func EliminarFactura(c *gin.Context, db *data.DB) {
 	}
 
 	var query string
-	if rol == "administrador" {
+	if rol == common.ADMIN {
 		query = `DELETE FROM facturas WHERE id = $1`
 	} else {
 		query = `DELETE FROM facturas WHERE id = $1 AND usuario_id = $2`
 	}
 
 	var result sql.Result
-	if rol == "administrador" {
+	if rol == common.ADMIN {
 		result, err = db.Exec(query, id)
 	} else {
 		result, err = db.Exec(query, id, idUsuario)
@@ -437,7 +438,7 @@ func GenerarPDF(c *gin.Context, db *data.DB) {
 	idUsuario := claims.UsuarioID
 
 	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
-	rolesPermitidos := []string{"administrador", "usuario"}
+	rolesPermitidos := []string{common.ADMIN, common.USER}
 	if !verificarRol(rol, rolesPermitidos) {
 		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página.")
 		c.JSON(http.StatusForbidden, errorResponse)
@@ -457,8 +458,8 @@ func GenerarPDF(c *gin.Context, db *data.DB) {
 		}
 	}
 
-	// Verificar si el usuario es el dueño de la factura o si tiene el rol de administrador
-	if factura.UsuarioID != idUsuario && rol != "administrador" {
+	// Verificar si el usuario es el dueño de la factura o si tiene el rol de ADMIN
+	if factura.UsuarioID != idUsuario && rol != common.ADMIN {
 		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para generar el archivo PDF de esta factura.")
 		c.JSON(http.StatusForbidden, errorResponse)
 		c.Abort()

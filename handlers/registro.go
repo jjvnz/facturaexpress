@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"facturaexpress/common"
 	"facturaexpress/data"
 	"facturaexpress/models"
 	"net/http"
@@ -78,7 +79,7 @@ func saveUserRole(db *data.DB, userID int64) error {
 		return models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta.")
 	}
 	defer stmt.Close()
-	row := stmt.QueryRow("usuario")
+	row := stmt.QueryRow(common.USER)
 	var roleID int64
 	if err = row.Scan(&roleID); err != nil {
 		return models.ErrorResponseInit("ROLE_ID_RETRIEVAL_FAILED", "Error al obtener el ID del rol.")
