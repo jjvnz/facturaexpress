@@ -21,7 +21,7 @@ func NewDB() (*DB, error) {
 		return nil, fmt.Errorf("error al cargar el archivo de configuración: %v", err)
 	}
 
-	var config models.DB
+	var config models.DBConfig
 	err = json.Unmarshal(configFile, &config)
 	if err != nil {
 		return nil, fmt.Errorf("error al leer el archivo de configuración: %v", err)

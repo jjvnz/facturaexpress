@@ -1,6 +1,6 @@
 package models
 
-type DB struct {
+type DBConfig struct {
 	DB struct {
 		Host     string `json:"host"`
 		Port     int    `json:"port"`
