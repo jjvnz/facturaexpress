@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"facturaexpress/data"
 	"facturaexpress/models"
 	"net/http"
@@ -131,12 +132,12 @@ func ActualizarRol(c *gin.Context, db *data.DB) {
 	// Convertir los valores de userID y newRoleID a enteros
 	userIDInt, err := strconv.Atoi(userID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "El ID del usuario debe ser un número entero válido"})
+		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("INVALID_USER_ID", "El ID del usuario debe ser un número entero válido"))
 		return
 	}
 	newRoleIDInt, err := strconv.Atoi(newRoleID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "El ID del nuevo rol debe ser un número entero válido"})
+		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("INVALID_ROLE_ID", "El ID del nuevo rol debe ser un número entero válido"))
 		return
 	}
 
@@ -144,71 +145,88 @@ func ActualizarRol(c *gin.Context, db *data.DB) {
 	var count int
 	stmt, err := db.Prepare(`SELECT COUNT(*) FROM usuarios WHERE id = $1`)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al preparar la consulta"})
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta"))
 		return
 	}
 	defer stmt.Close()
 	err = stmt.QueryRow(userIDInt).Scan(&count)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al verificar si el usuario existe"})
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("USER_VERIFICATION_FAILED", "Error al verificar si el usuario existe"))
 		return
 	}
 	if count == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "El usuario especificado no existe"})
+		c.JSON(http.StatusNotFound, models.ErrorResponseInit("USER_NOT_FOUND", "El usuario especificado no existe"))
 		return
 	}
 	stmt, err = db.Prepare(`SELECT COUNT(*) FROM roles WHERE id = $1`)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al preparar la consulta"})
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta"))
 		return
 	}
 	defer stmt.Close()
 	err = stmt.QueryRow(newRoleIDInt).Scan(&count)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al verificar si el rol existe"})
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("ROLE_VERIFICATION_FAILED", "Error al verificar si el rol existe"))
 		return
 	}
 	if count == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "El rol especificado no existe"})
+		c.JSON(http.StatusNotFound, models.ErrorResponseInit("ROLE_NOT_FOUND", "El rol especificado no existe"))
+		return
+	}
+
+	// Verificar si el usuario ya tiene el rol especificado
+	stmt, err = db.Prepare(`SELECT COUNT(*) FROM user_roles WHERE user_id = $1 AND role_id = $2`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta"))
+		return
+	}
+	defer stmt.Close()
+	err = stmt.QueryRow(userIDInt, newRoleIDInt).Scan(&count)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("USER_ROLE_VERIFICATION_FAILED", "Error al verificar si el usuario ya tiene el rol especificado"))
+		return
+	}
+	if count > 0 {
+		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("USER_ALREADY_HAS_ROLE", "El usuario ya tiene el rol especificado. Por favor, actualice a otro rol."))
 		return
 	}
 
 	// Actualizar el rol del usuario en la base de datos
 	stmt, err = db.Prepare(`UPDATE user_roles SET role_id = $1 WHERE user_id = $2`)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al preparar la consulta"})
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta"))
 		return
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(newRoleIDInt, userIDInt)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al actualizar el rol del usuario"})
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("USER_ROLE_UPDATE_FAILED", "Error al actualizar el rol del usuario"))
 		return
 	}
 
 	// Obtener el token JWT del usuario cuyo rol ha cambiado
 	stmt, err = db.Prepare(`SELECT jwt_token FROM usuarios WHERE id = $1`)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al Obtener el token JWT del usuario"})
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta"))
 		return
 	}
 	defer stmt.Close()
-	var tokenString string
+	var tokenString sql.NullString
 	err = stmt.QueryRow(userIDInt).Scan(&tokenString)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al Obtener el token JWT del usuario"})
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("JWT_TOKEN_RETRIEVAL_FAILED", "Error al obtener el token JWT del usuario"))
 		return
 	}
-	if tokenString != "" {
+	if tokenString.Valid && tokenString.String != "" {
 		stmt, err := db.Prepare(`INSERT INTO jwt_blacklist (token) VALUES ($1)`)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al preparar la consulta"})
+			c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta"))
 			return
 		}
 		defer stmt.Close()
-		_, err = stmt.Exec(tokenString)
+		_, err = stmt.Exec(tokenString.String)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al agregar el token a la lista negra"})
+			c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("JWT_TOKEN_BLACKLISTING_FAILED", "Error al agregar el token a la lista negra"))
 			return
 		}
 	}

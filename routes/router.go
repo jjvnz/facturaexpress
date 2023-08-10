@@ -53,6 +53,19 @@ func NewRouter(db *data.DB, jwtKey []byte, expTimeStr string) *gin.Engine {
 				handler.ListRoles(c, db)
 			})
 
+			adminRoutes.GET("/usuarios", func(c *gin.Context) {
+				handler.ListarUsuarios(c, db)
+			})
+			adminRoutes.POST("/usuarios", func(c *gin.Context) {
+				handler.CrearUsuario(c, db)
+			})
+			adminRoutes.PUT("/usuarios/:id", func(c *gin.Context) {
+				handler.ActualizarUsuario(c, db)
+			})
+			adminRoutes.DELETE("/usuarios/:id", func(c *gin.Context) {
+				handler.EliminarUsuario(c, db)
+			})
+
 			authorized.GET("/facturas", func(c *gin.Context) {
 				handler.ListarFacturas(c, db)
 			})

@@ -65,8 +65,10 @@ func verifyCredentials(db *data.DB, correo string, password string) (models.Usua
 	}
 	defer stmt.Close()
 	row := stmt.QueryRow(correo)
-	err = row.Scan(&user.ID, &user.NombreUsuario, &user.Password, &user.Role)
-	if err == sql.ErrNoRows || bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) != nil {
+	err = row.Scan(&user.ID, &user.Nombre, &user.Password, &user.Role)
+	if err == sql.ErrNoRows {
+		return user, err
+	} else if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) != nil {
 		return user, models.ErrorResponseInit("INCORRECT_PASSWORD", "La contraseña que ingresaste es incorrecta.")
 	}
 	return user, nil

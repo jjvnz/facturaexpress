@@ -18,7 +18,7 @@ func Register(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	if err := checkUsernameEmail(db, user.NombreUsuario, user.Correo); err != nil {
+	if err := checkUsernameEmail(db, user.Nombre, user.Correo); err != nil {
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
@@ -29,7 +29,7 @@ func Register(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	userID, err := saveUser(db, user.NombreUsuario, hashedPassword, user.Correo)
+	userID, err := saveUser(db, user.Nombre, hashedPassword, user.Correo)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err)
 		return
