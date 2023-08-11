@@ -82,12 +82,12 @@ func NewRouter(db *data.DB, jwtKey []byte, expTimeStr string) *gin.Engine {
 				handler.EliminarFactura(c, db)
 			})
 
-			// Agregar nueva ruta para generar PDFs
+			//ruta para generar PDFs
 			authorized.GET("/facturas/:id/pdf", func(c *gin.Context) {
 				handler.GenerarPDF(c, db)
 			})
 
-			// En tu archivo router.go, agrega una nueva ruta para manejar solicitudes de logout
+			// ruta para manejar solicitudes de logout
 			authorized.POST("/logout", func(c *gin.Context) {
 				handler.Logout(c, db)
 			})
