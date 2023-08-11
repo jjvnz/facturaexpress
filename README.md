@@ -44,7 +44,7 @@ La estructura escojida para el proyecto es la siguiente:
 ```
 facturaexpress/
 ├── common/
-|       └── constant.go
+│       └── constant.go
 ├── data/
 │   └── db.go
 ├── font/
@@ -52,14 +52,18 @@ facturaexpress/
 ├── handlers/
 │   ├── factura.go
 │   ├── login.go
+│   ├── logout.go
 │   ├── registro.go
-│   └── roles.go
+│   ├── roles.go
+│   └── usuarios.go
 ├── middlewares/
 │   └── auth.go
 ├── models/
 │   ├── claims.go
+│   ├── db.go
 │   ├── error.go
 │   ├── factura.go
+│   ├── jwt.go
 │   ├── roles.go
 │   └── usuario.go
 ├── routes/
@@ -68,8 +72,9 @@ facturaexpress/
 ├── config.json
 ├── go.mod
 ├── go.sum
-├── main.go
-└── README.md
+├── main.go 
+└── README.md 
+
 ```
 - La carpeta `common` contiene el archivo `constant.go` en él se definen constantes requeridas en el proyecto como "ADMIN" y "USER" etc.
 - La carpeta `data` contiene el archivo `db.go` que interactúa con la base de datos.
