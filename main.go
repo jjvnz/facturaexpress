@@ -38,5 +38,5 @@ func main() {
 	router := routes.NewRouter(db, jwtKey, expTimeStr)
 
 	// Inicia el servidor Gin y escucha las solicitudes entrantes
-	router.Run(":8000")
+	router.Run("localhost:8000")
 }
