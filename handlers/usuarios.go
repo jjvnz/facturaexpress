@@ -78,22 +78,28 @@ func ActualizarUsuario(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	query := "UPDATE usuarios SET nombre_usuario=$1,password=$2 WHERE id=$3"
-	result, err := db.Exec(query, &usuario.Nombre, &usuario.Password, id)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(usuario.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("PASSWORD_HASHING_FAILED", "Error al hashear la contraseña."))
+		return
+	}
+
+	query := "UPDATE usuarios SET nombre_usuario=$1, password=$2, correo=$3 WHERE id=$4"
+	result, err := db.Exec(query, &usuario.Nombre, hashedPassword, &usuario.Correo, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
 	count, err := result.RowsAffected()
 	if count == 0 {
-		c.JSON(http.StatusNotFound, "No se encontró el registro")
+		c.JSON(http.StatusNotFound, models.ErrorResponseInit("NOT_FOUND", "No se encontró el usuario con el ID especificado."))
 		return
 	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, "Registro actualizado")
+	c.JSON(http.StatusOK, gin.H{"message": "Los datos del usuario se han actualizado correctamente."})
 }
 
 func EliminarUsuario(c *gin.Context, db *data.DB) {
@@ -119,5 +125,5 @@ func EliminarUsuario(c *gin.Context, db *data.DB) {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, "Registro eliminado")
+	c.JSON(http.StatusOK, gin.H{"message": "El registro ha sido eliminado correctamente."})
 }
