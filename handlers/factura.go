@@ -34,27 +34,23 @@ func ListarFacturas(c *gin.Context, db *data.DB) {
 
 	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
 	if rol != common.ADMIN && rol != common.USER {
-		errorResponse := models.ErrorResponseInit("INSUFFICIENT_ROLE", "Lo siento, pero parece que no tienes los permisos necesarios para acceder a esta página. Por favor, verifica tus credenciales o contacta al ADMIN para obtener más información.")
-		c.AbortWithStatusJSON(http.StatusForbidden, errorResponse)
+		c.AbortWithStatusJSON(http.StatusForbidden, models.ErrorResponseInit("INSUFFICIENT_ROLE", "Lo siento, pero parece que no tienes los permisos necesarios para acceder a esta página. Por favor, verifica tus credenciales o contacta al ADMIN para obtener más información."))
 		return
 	}
 
 	// Obtener y validar los parámetros de la consulta
 	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
 	if err != nil || page < 1 {
-		errorResponse := models.ErrorResponseInit("INVALID_PAGE_PARAM", "El parámetro 'page' debe ser un número entero positivo")
-		c.AbortWithStatusJSON(http.StatusBadRequest, errorResponse)
+		c.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponseInit("INVALID_PAGE_PARAM", "El parámetro 'page' debe ser un número entero positivo"))
 		return
 	}
 	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	if err != nil || limit < 1 {
-		errorResponse := models.ErrorResponseInit("INVALID_LIMIT_PARAM", "El parámetro 'limit' debe ser un número entero positivo")
-		c.AbortWithStatusJSON(http.StatusBadRequest, errorResponse)
+		c.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponseInit("INVALID_LIMIT_PARAM", "El parámetro 'limit' debe ser un número entero positivo"))
 		return
 	}
 	if limit > 100 {
-		errorResponse := models.ErrorResponseInit("LIMIT_TOO_HIGH", "El parámetro 'limit' no puede ser mayor a 100")
-		c.AbortWithStatusJSON(http.StatusBadRequest, errorResponse)
+		c.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponseInit("LIMIT_TOO_HIGH", "El parámetro 'limit' no puede ser mayor a 100"))
 		return
 	}
 
@@ -84,8 +80,7 @@ func ListarFacturas(c *gin.Context, db *data.DB) {
 	}
 	rows, err = db.Query(query, args...)
 	if err != nil {
-		errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al obtener las facturas")
-		c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al obtener las facturas"))
 		c.Abort()
 		return
 	}
@@ -108,15 +103,13 @@ func ListarFacturas(c *gin.Context, db *data.DB) {
 
 		err := rows.Scan(&id, &nombreEmpresa, &nitEmpresa, &fecha, &servicios, &valorTotal, &nombreOperador, &tipoDocumento, &documento, &ciudadExpedicion, &celular, &numeroCuenta, &tipoCuenta, &banco, &usuarioID)
 		if err != nil {
-			errorResponse := models.ErrorResponseInit("DATABASE_ERROR", "Ocurrió un error al leer los datos de la base de datos")
-			c.JSON(http.StatusInternalServerError, errorResponse)
+			c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("DATABASE_ERROR", "Ocurrió un error al leer los datos de la base de datos"))
 			return
 		}
 
 		serviciosDeserializados, err := unmarshalServicios(servicios)
 		if err != nil {
-			errorResponse := models.ErrorResponseInit("SERVICES_DESERIALIZATION_ERROR", "Error al deserializar servicios")
-			c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponseInit("SERVICES_DESERIALIZATION_ERROR", "Error al deserializar servicios"))
 			c.Abort()
 			return
 		}
@@ -136,8 +129,7 @@ func ListarFacturas(c *gin.Context, db *data.DB) {
 	// Verificar si se encontraron facturas y contar el total de facturas
 	switch len(facturas) {
 	case 0:
-		errorResponse := models.ErrorResponseInit("NOT_FOUND", "La página solicitada no existe")
-		c.AbortWithStatusJSON(http.StatusNotFound, errorResponse)
+		c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponseInit("NOT_FOUND", "La página solicitada no existe"))
 		c.Abort()
 	default:
 		var totalFacturas int
@@ -155,8 +147,7 @@ func ListarFacturas(c *gin.Context, db *data.DB) {
 		}
 		err = db.QueryRow(query, args...).Scan(&totalFacturas)
 		if err != nil {
-			errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al contar las facturas")
-			c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al contar las facturas"))
 			c.Abort()
 			return
 		}
@@ -177,22 +168,19 @@ func CrearFactura(c *gin.Context, db *data.DB) {
 
 	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
 	if !verificarRol(rol, []string{common.ADMIN, common.USER}) {
-		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página.")
-		c.JSON(http.StatusForbidden, errorResponse)
+		c.JSON(http.StatusForbidden, models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página."))
 		return
 	}
 
 	var factura models.Factura
 	if err := c.BindJSON(&factura); err != nil {
-		errorResponse := models.ErrorResponseInit("INVALID_DATA", "Datos inválidos. Verifica y vuelve a intentarlo.")
-		c.JSON(http.StatusBadRequest, errorResponse)
+		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("INVALID_DATA", "Datos inválidos. Verifica y vuelve a intentarlo."))
 		return
 	}
 
 	serviciosJSON, err := json.Marshal(factura.Servicios)
 	if err != nil {
-		errorResponse := models.ErrorResponseInit("SERVICES_MARSHAL_ERROR", "Error al codificar los servicios en formato JSON.")
-		c.JSON(http.StatusInternalServerError, errorResponse)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("SERVICES_MARSHAL_ERROR", "Error al codificar los servicios en formato JSON."))
 		return
 	}
 
@@ -214,8 +202,7 @@ func CrearFactura(c *gin.Context, db *data.DB) {
 		idUsuario).Scan(&factura.ID)
 
 	if err != nil {
-		errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al procesar las facturas")
-		c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al procesar las facturas"))
 		c.Abort()
 		return
 	}
@@ -245,8 +232,7 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
 
 	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
 	if !verificarRol(rol, []string{common.ADMIN, common.USER}) {
-		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página.")
-		c.JSON(http.StatusForbidden, errorResponse)
+		c.JSON(http.StatusForbidden, models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página."))
 		c.Abort()
 		return
 	}
@@ -256,14 +242,12 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
 		// Verificar si el usuario está intentando actualizar su propia factura
 		idUsuarioFactura, err := obtenerUsuarioIDFactura(db, idFactura)
 		if err != nil {
-			errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al obtener el ID del usuario de la factura.")
-			c.JSON(http.StatusInternalServerError, errorResponse)
+			c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al obtener el ID del usuario de la factura."))
 			c.Abort()
 			return
 		}
 		if idUsuario != idUsuarioFactura {
-			errorResponse := models.ErrorResponseInit("NO_PERMISSION", "Solo puedes actualizar tus propias facturas.")
-			c.JSON(http.StatusForbidden, errorResponse)
+			c.JSON(http.StatusForbidden, models.ErrorResponseInit("NO_PERMISSION", "Solo puedes actualizar tus propias facturas."))
 			c.Abort()
 			return
 		}
@@ -272,24 +256,21 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
 	var factura models.Factura
 	err := c.BindJSON(&factura)
 	if err != nil {
-		errorResponse := models.ErrorResponseInit("INVALID_DATA", "Datos inválidos. Verifica y vuelve a intentarlo.")
-		c.JSON(http.StatusBadRequest, errorResponse)
+		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("INVALID_DATA", "Datos inválidos. Verifica y vuelve a intentarlo."))
 		c.Abort()
 		return
 	}
 
 	// Validar los datos de entrada
 	if factura.Empresa.Nombre == "" || factura.Empresa.NIT == "" || factura.Fecha.IsZero() || len(factura.Servicios) == 0 {
-		errorResponse := models.ErrorResponseInit("MISSING_FIELDS", "Faltan campos requeridos.")
-		c.JSON(http.StatusBadRequest, errorResponse)
+		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("MISSING_FIELDS", "Faltan campos requeridos."))
 		c.Abort()
 		return
 	}
 
 	serviciosJSON, err := json.Marshal(factura.Servicios)
 	if err != nil {
-		errorResponse := models.ErrorResponseInit("SERVICIOS_MARSHAL_ERROR", "Error al codificar los servicios en formato JSON.")
-		c.JSON(http.StatusInternalServerError, errorResponse)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("SERVICIOS_MARSHAL_ERROR", "Error al codificar los servicios en formato JSON."))
 		c.Abort()
 		return
 	}
@@ -298,14 +279,12 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
 	var existeUsuario bool
 	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM usuarios WHERE id = $1)", idUsuario).Scan(&existeUsuario)
 	if err != nil {
-		errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al verificar si el usuario existe.")
-		c.JSON(http.StatusInternalServerError, errorResponse)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al verificar si el usuario existe."))
 		c.Abort()
 		return
 	}
 	if !existeUsuario {
-		errorResponse := models.ErrorResponseInit("USER_NOT_FOUND", "El usuario especificado no existe.")
-		c.JSON(http.StatusBadRequest, errorResponse)
+		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("USER_NOT_FOUND", "El usuario especificado no existe."))
 		c.Abort()
 		return
 	}
@@ -322,8 +301,7 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
 			banco_operador = $13 WHERE id = $14`
 	result, err := db.Exec(query, factura.Empresa.Nombre, factura.Empresa.NIT, factura.Fecha, serviciosJSON, factura.ValorTotal, factura.Operador.Nombre, factura.Operador.TipoDocumento, factura.Operador.Documento, factura.Operador.CiudadExpedicionDocumento, factura.Operador.Celular, factura.Operador.NumeroCuentaBancaria, factura.Operador.TipoCuentaBancaria, factura.Operador.Banco, idFactura)
 	if err != nil {
-		errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al actualizar la factura en la base de datos.")
-		c.JSON(http.StatusInternalServerError, errorResponse)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al actualizar la factura en la base de datos."))
 		c.Abort()
 		return
 	}
@@ -331,8 +309,7 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
 	if rowsAffected, _ := result.RowsAffected(); rowsAffected > 0 {
 		c.JSON(http.StatusOK, gin.H{"message": "Factura actualizada correctamente"})
 	} else {
-		errorResponse := models.ErrorResponseInit("INVOICE_NOT_FOUND", "No se encontró la factura con el ID especificado")
-		c.JSON(http.StatusNotFound, errorResponse)
+		c.JSON(http.StatusNotFound, models.ErrorResponseInit("INVOICE_NOT_FOUND", "No se encontró la factura con el ID especificado"))
 	}
 }
 
@@ -345,8 +322,7 @@ func EliminarFactura(c *gin.Context, db *data.DB) {
 	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
 	rolesPermitidos := []string{common.ADMIN, common.USER}
 	if !verificarRol(rol, rolesPermitidos) {
-		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página.")
-		c.JSON(http.StatusForbidden, errorResponse)
+		c.JSON(http.StatusForbidden, models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página."))
 		c.Abort()
 		return
 	}
@@ -355,14 +331,12 @@ func EliminarFactura(c *gin.Context, db *data.DB) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		errorResponse := models.ErrorResponseInit("INVALID_ID", "El valor del parámetro id no es un número válido")
-		c.JSON(http.StatusBadRequest, errorResponse)
+		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("INVALID_ID", "El valor del parámetro id no es un número válido"))
 		c.Abort()
 		return
 	}
 	if id <= 0 {
-		errorResponse := models.ErrorResponseInit("INVALID_ID", "El valor del parámetro id debe ser un número entero positivo")
-		c.JSON(http.StatusBadRequest, errorResponse)
+		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("INVALID_ID", "El valor del parámetro id debe ser un número entero positivo"))
 		c.Abort()
 		return
 	}
@@ -381,8 +355,7 @@ func EliminarFactura(c *gin.Context, db *data.DB) {
 		result, err = db.Exec(query, id, idUsuario)
 	}
 	if err != nil {
-		errorResponse := models.ErrorResponseInit("SQL_ERROR", "Error al ejecutar la consulta SQL")
-		c.JSON(http.StatusInternalServerError, errorResponse)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("SQL_ERROR", "Error al ejecutar la consulta SQL"))
 		c.Abort()
 		return
 	}
@@ -390,8 +363,7 @@ func EliminarFactura(c *gin.Context, db *data.DB) {
 	if rowsAffected, _ := result.RowsAffected(); rowsAffected > 0 {
 		c.JSON(http.StatusOK, gin.H{"message": "Factura eliminada correctamente"})
 	} else {
-		errorResponse := models.ErrorResponseInit("INVOICE_NOT_FOUND", "No se encontró la factura con el ID especificado o no tienes permiso para eliminarla")
-		c.JSON(http.StatusNotFound, errorResponse)
+		c.JSON(http.StatusNotFound, models.ErrorResponseInit("INVOICE_NOT_FOUND", "No se encontró la factura con el ID especificado o no tienes permiso para eliminarla"))
 		c.Abort()
 	}
 }
@@ -440,8 +412,7 @@ func GenerarPDF(c *gin.Context, db *data.DB) {
 	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
 	rolesPermitidos := []string{common.ADMIN, common.USER}
 	if !verificarRol(rol, rolesPermitidos) {
-		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página.")
-		c.JSON(http.StatusForbidden, errorResponse)
+		c.JSON(http.StatusForbidden, models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página."))
 		c.Abort()
 		return
 	}
@@ -460,8 +431,7 @@ func GenerarPDF(c *gin.Context, db *data.DB) {
 
 	// Verificar si el usuario es el dueño de la factura o si tiene el rol de ADMIN
 	if factura.UsuarioID != idUsuario && rol != common.ADMIN {
-		errorResponse := models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para generar el archivo PDF de esta factura.")
-		c.JSON(http.StatusForbidden, errorResponse)
+		c.JSON(http.StatusForbidden, models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para generar el archivo PDF de esta factura."))
 		c.Abort()
 		return
 	}

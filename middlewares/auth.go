@@ -16,8 +16,7 @@ func AuthMiddleware(c *gin.Context, db *data.DB, jwtKey []byte) {
 	// Extrae el token JWT del encabezado Authorization
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-		errorResponse := models.ErrorResponseInit("INVALID_AUTH_HEADER", "Falta encabezado Authorization o prefijo Bearer")
-		c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse)
+		c.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponseInit("INVALID_AUTH_HEADER", "Falta encabezado Authorization o prefijo Bearer"))
 		c.Abort()
 		return
 	}
@@ -31,8 +30,7 @@ func AuthMiddleware(c *gin.Context, db *data.DB, jwtKey []byte) {
 		return jwtKey, nil
 	})
 	if err != nil || !token.Valid {
-		errorResponse := models.ErrorResponseInit("INVALID_TOKEN", "Token inválido. Verifica o solicita uno nuevo.")
-		c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse)
+		c.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponseInit("INVALID_TOKEN", "Token inválido. Verifica o solicita uno nuevo."))
 		c.Abort()
 		return
 	}
@@ -41,8 +39,7 @@ func AuthMiddleware(c *gin.Context, db *data.DB, jwtKey []byte) {
 	tokenString := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
 	stmt, err := db.Prepare(`SELECT COUNT(*) FROM jwt_blacklist WHERE token = $1`)
 	if err != nil {
-		errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al preparar la consulta")
-		c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al preparar la consulta"))
 		c.Abort()
 		return
 	}
@@ -50,14 +47,12 @@ func AuthMiddleware(c *gin.Context, db *data.DB, jwtKey []byte) {
 	var count int
 	err = stmt.QueryRow(tokenString).Scan(&count)
 	if err != nil {
-		errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al verificar si el token está en la lista negra")
-		c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al verificar si el token está en la lista negra"))
 		c.Abort()
 		return
 	}
 	if count > 0 {
-		errorResponse := models.ErrorResponseInit("INVALID_TOKEN", "Token inválido. Verifica o solicita uno nuevo.")
-		c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse)
+		c.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponseInit("INVALID_TOKEN", "Token inválido. Verifica o solicita uno nuevo."))
 		c.Abort()
 		return
 	}
@@ -82,21 +77,18 @@ func RoleAuthMiddleware(c *gin.Context, db *data.DB, role string) {
 	var userRole models.UserRole
 	stmt, err := db.Prepare(`SELECT user_id, role_id FROM user_roles JOIN roles ON user_roles.role_id = roles.id WHERE user_roles.user_id = $1 AND roles.name = $2`)
 	if err != nil {
-		errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al preparar la consulta")
-		c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al preparar la consulta"))
 		c.Abort()
 		return
 	}
 	defer stmt.Close()
 	err = stmt.QueryRow(userID, role).Scan(&userRole.UserID, &userRole.RoleID)
 	if err == sql.ErrNoRows {
-		errorResponse := models.ErrorResponseInit("INSUFFICIENT_ROLE", "No tiene el rol necesario para acceder a esta ruta")
-		c.AbortWithStatusJSON(http.StatusForbidden, errorResponse)
+		c.AbortWithStatusJSON(http.StatusForbidden, models.ErrorResponseInit("INSUFFICIENT_ROLE", "No tiene el rol necesario para acceder a esta ruta"))
 		c.Abort()
 		return
 	} else if err != nil {
-		errorResponse := models.ErrorResponseInit("DB_ERROR", "Error al verificar si el usuario tiene el rol necesario")
-		c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al verificar si el usuario tiene el rol necesario"))
 		c.Abort()
 		return
 	}
