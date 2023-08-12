@@ -130,7 +130,7 @@ Para ejecutar la aplicación, navega hasta el directorio del proyecto y ejecuta 
 
 ## Uso
 
-Una vez que el servidor esté en ejecución, puedes utilizar un cliente HTTP como Postman o cURL para enviar solicitudes a la API. Consulta la documentación de la API para obtener más información sobre los puntos finales disponibles y cómo utilizarlos.
+Una vez que el servidor esté en ejecución, puedes utilizar un cliente HTTP como Postman o cURL para enviar solicitudes a la API. Consulta la [Documentación de Postman](https://documenter.getpostman.com/view/23764700/2s9Xy5LAAk) de la API para obtener más información sobre los puntos finales disponibles y cómo utilizarlos.
 
 
 ## Manejo de roles y permisos
