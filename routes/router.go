@@ -18,6 +18,7 @@ func NewRouter(db *data.DB, jwtKey []byte, expTimeStr string) *gin.Engine {
 	// Configurar la política de CORS
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"http://localhost:5173"}
+	config.AllowHeaders = []string{"Authorization", "Content-Type"} // Agregar el encabezado "Content-Type" a la lista de encabezados permitidos
 	router.Use(cors.New(config))
 
 	v1 := router.Group("/v1")
