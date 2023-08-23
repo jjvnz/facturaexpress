@@ -50,22 +50,26 @@ facturaexpress/
 ├── font/
 │   └── DejaVuSans.ttf
 ├── handlers/
-│   ├── factura.go
-│   ├── login.go
-│   ├── logout.go
-│   ├── registro.go
-│   ├── roles.go
-│   └── usuarios.go
+│   ├── auth/
+│   │       ├── login.go
+│   │       ├── logout.go
+│   │       └── register.go
+│   ├── invoice/
+│   │       └── invoice.go
+│   ├── role/
+│   │       └── role.go
+│   ├── user/
+│   │       └── user.go
 ├── middlewares/
 │   └── auth.go
 ├── models/
-│   ├── claims.go
+│   ├── claim.go
 │   ├── db.go
 │   ├── error.go
-│   ├── factura.go
+│   ├── invoice.go
 │   ├── jwt.go
-│   ├── roles.go
-│   └── usuario.go
+│   ├── role.go
+│   └── user.go
 ├── routes/
 │   └── router.go
 ├── .gitignore
@@ -73,7 +77,7 @@ facturaexpress/
 ├── go.mod
 ├── go.sum
 ├── main.go 
-└── README.md 
+└── README.md
 
 ```
 - La carpeta `common` contiene el archivo `constant.go` en él se definen constantes requeridas en el proyecto como "ADMIN" y "USER" etc.
