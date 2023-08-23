@@ -52,14 +52,20 @@ facturaexpress/
 ├── handlers/
 │   ├── auth/
 │   │       ├── login.go
+│   │       ├── login_test.go
 │   │       ├── logout.go
-│   │       └── register.go
+│   │       ├── logout_test.go
+│   │       ├── register.go
+│   │       └── register_test.go
 │   ├── invoice/
-│   │       └── invoice.go
+│   │       ├── invoice.go
+│   │       └── invoice_test.go
 │   ├── role/
-│   │       └── role.go
+│   │       ├── role.go
+│   │       └── role_test.go
 │   ├── user/
-│   │       └── user.go
+│   │       ├── user.go
+│   │       └── user_test.go
 ├── middlewares/
 │   └── auth.go
 ├── models/
