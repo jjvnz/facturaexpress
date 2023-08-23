@@ -45,11 +45,10 @@ func NewRouter(db *data.DB, jwtKey []byte, expTimeStr string) *gin.Engine {
 				middleware.RoleAuthMiddleware(c, db, common.ADMIN)
 			})
 
-			adminRoutes.PUT("/users/:userID/roles/:roleID", func(c *gin.Context) {
+			adminRoutes.PUT("/users/:id/new-role/:newRoleID", func(c *gin.Context) {
 				roleHandler.AssignRole(c, db)
 			})
-
-			adminRoutes.PUT("/users/:userID/new-role/:newRoleID", func(c *gin.Context) {
+			adminRoutes.PUT("/users/:id/roles/:roleID", func(c *gin.Context) {
 				roleHandler.UpdateRole(c, db)
 			})
 

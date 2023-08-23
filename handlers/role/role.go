@@ -12,20 +12,20 @@ import (
 
 func AssignRole(c *gin.Context, db *data.DB) {
 	// Obtener el ID del usuario y el ID del rol de los parámetros de la solicitud
-	userID := c.Param("userID")
-	roleID := c.Param("roleID")
+	userID := c.Param("id")
+	newRoleID := c.Param("newRoleID")
 
-	if userID == "" || roleID == " " {
+	if userID == "" || newRoleID == " " {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error en los paramentros de consulta"})
 	}
 
-	// Convertir los valores de userID y roleID a enteros
+	// Convertir los valores de userID y newRoleID a enteros
 	userIDInt, err := strconv.Atoi(userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "El ID del usuario debe ser un número entero válido"})
 		return
 	}
-	roleIDInt, err := strconv.Atoi(roleID)
+	roleIDInt, err := strconv.Atoi(newRoleID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "El ID del rol debe ser un número entero válido"})
 		return
@@ -126,16 +126,16 @@ func ListRoles(c *gin.Context, db *data.DB) {
 
 func UpdateRole(c *gin.Context, db *data.DB) {
 	// Obtener el ID del usuario y el ID del nuevo rol de los parámetros de la solicitud
-	userID := c.Param("userID")
-	newRoleID := c.Param("newRoleID")
+	userID := c.Param("id")
+	roleID := c.Param("roleID")
 
-	// Convertir los valores de userID y newRoleID a enteros
+	// Convertir los valores de userID y roleID a enteros
 	userIDInt, err := strconv.Atoi(userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("INVALID_USER_ID", "El ID del usuario debe ser un número entero válido"))
 		return
 	}
-	newRoleIDInt, err := strconv.Atoi(newRoleID)
+	roleIDInt, err := strconv.Atoi(roleID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("INVALID_ROLE_ID", "El ID del nuevo rol debe ser un número entero válido"))
 		return
@@ -164,7 +164,7 @@ func UpdateRole(c *gin.Context, db *data.DB) {
 		return
 	}
 	defer stmt.Close()
-	err = stmt.QueryRow(newRoleIDInt).Scan(&count)
+	err = stmt.QueryRow(roleIDInt).Scan(&count)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("ROLE_VERIFICATION_FAILED", "Error al verificar si el rol existe"))
 		return
@@ -181,7 +181,7 @@ func UpdateRole(c *gin.Context, db *data.DB) {
 		return
 	}
 	defer stmt.Close()
-	err = stmt.QueryRow(userIDInt, newRoleIDInt).Scan(&count)
+	err = stmt.QueryRow(userIDInt, roleIDInt).Scan(&count)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("USER_ROLE_VERIFICATION_FAILED", "Error al verificar si el usuario ya tiene el rol especificado"))
 		return
@@ -198,7 +198,7 @@ func UpdateRole(c *gin.Context, db *data.DB) {
 		return
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(newRoleIDInt, userIDInt)
+	_, err = stmt.Exec(roleIDInt, userIDInt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("USER_ROLE_UPDATE_FAILED", "Error al actualizar el rol del usuario"))
 		return
