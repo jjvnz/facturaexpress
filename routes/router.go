@@ -3,7 +3,10 @@ package routes
 import (
 	"facturaexpress/common"
 	"facturaexpress/data"
-	handler "facturaexpress/handlers"
+	authHandler "facturaexpress/handlers/auth"
+	invoiceHandler "facturaexpress/handlers/invoice"
+	roleHandler "facturaexpress/handlers/role"
+	userHandler "facturaexpress/handlers/user"
 	middleware "facturaexpress/middlewares"
 
 	"github.com/gin-contrib/cors"
@@ -15,7 +18,7 @@ func NewRouter(db *data.DB, jwtKey []byte, expTimeStr string) *gin.Engine {
 	router.ForwardedByClientIP = true
 	router.SetTrustedProxies([]string{"192.168.1.2", "10.0.0.0/8"})
 
-	// Configurar la política de CORS
+	// Configure CORS policy
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"http://localhost:5173"}
 	config.AllowHeaders = []string{"Authorization", "Content-Type"}
@@ -24,14 +27,14 @@ func NewRouter(db *data.DB, jwtKey []byte, expTimeStr string) *gin.Engine {
 	v1 := router.Group("/v1")
 	{
 		v1.POST("/register", func(c *gin.Context) {
-			handler.Register(c, db)
+			authHandler.Register(c, db)
 		})
 
 		v1.POST("/login", func(c *gin.Context) {
-			handler.Login(c, db, jwtKey, expTimeStr)
+			authHandler.Login(c, db, jwtKey, expTimeStr)
 		})
 
-		// Rutas protegidas con el middleware AuthMiddleware
+		// Routes protected with AuthMiddleware middleware
 		authorized := v1.Group("/")
 		authorized.Use(func(c *gin.Context) {
 			middleware.AuthMiddleware(c, db, jwtKey)
@@ -43,56 +46,55 @@ func NewRouter(db *data.DB, jwtKey []byte, expTimeStr string) *gin.Engine {
 			})
 
 			adminRoutes.PUT("/users/:userID/roles/:roleID", func(c *gin.Context) {
-				handler.AssignRole(c, db)
+				roleHandler.AssignRole(c, db)
 			})
 
 			adminRoutes.PUT("/users/:userID/new-role/:newRoleID", func(c *gin.Context) {
-				handler.ActualizarRol(c, db)
+				roleHandler.UpdateRole(c, db)
 			})
 
 			adminRoutes.GET("/roles", func(c *gin.Context) {
-				handler.ListRoles(c, db)
+				roleHandler.ListRoles(c, db)
 			})
 
-			adminRoutes.GET("/usuarios", func(c *gin.Context) {
-				handler.ListarUsuarios(c, db)
+			adminRoutes.GET("/users", func(c *gin.Context) {
+				userHandler.ListUsers(c, db)
 			})
-			adminRoutes.POST("/usuarios", func(c *gin.Context) {
-				handler.CrearUsuario(c, db)
+			adminRoutes.POST("/users", func(c *gin.Context) {
+				userHandler.CreateUser(c, db)
 			})
-			adminRoutes.PUT("/usuarios/:id", func(c *gin.Context) {
-				handler.ActualizarUsuario(c, db)
+			adminRoutes.PUT("/users/:id", func(c *gin.Context) {
+				userHandler.UpdateUser(c, db)
 			})
-			adminRoutes.DELETE("/usuarios/:id", func(c *gin.Context) {
-				handler.EliminarUsuario(c, db)
-			})
-
-			authorized.GET("/facturas", func(c *gin.Context) {
-				handler.ListarFacturas(c, db)
+			adminRoutes.DELETE("/users/:id", func(c *gin.Context) {
+				userHandler.DeleteUser(c, db)
 			})
 
-			authorized.POST("/facturas", func(c *gin.Context) {
-				handler.CrearFactura(c, db)
+			authorized.GET("/invoices", func(c *gin.Context) {
+				invoiceHandler.ListInvoices(c, db)
 			})
 
-			authorized.PUT("/facturas/:id", func(c *gin.Context) {
-				handler.ActualizarFactura(c, db)
+			authorized.POST("/invoices", func(c *gin.Context) {
+				invoiceHandler.CreateInvoice(c, db)
 			})
 
-			authorized.DELETE("/facturas/:id", func(c *gin.Context) {
-				handler.EliminarFactura(c, db)
+			authorized.PUT("/invoices/:id", func(c *gin.Context) {
+				invoiceHandler.UpdateInvoice(c, db)
 			})
 
-			//ruta para generar PDFs
-			authorized.GET("/facturas/:id/pdf", func(c *gin.Context) {
-				handler.GenerarPDF(c, db)
+			authorized.DELETE("/invoices/:id", func(c *gin.Context) {
+				invoiceHandler.DeleteInvoice(c, db)
 			})
 
-			// ruta para manejar solicitudes de logout
+			// route to generate PDFs
+			authorized.GET("/invoices/:id/pdf", func(c *gin.Context) {
+				invoiceHandler.GeneratePDF(c, db)
+			})
+
+			// route to handle logout requests
 			authorized.POST("/logout", func(c *gin.Context) {
-				handler.Logout(c, db)
+				authHandler.Logout(c, db)
 			})
-
 		}
 	}
 

@@ -5,13 +5,14 @@ import (
 	"strconv"
 
 	"facturaexpress/data"
+	handlers "facturaexpress/handlers/auth"
 	"facturaexpress/models"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func ListarUsuarios(c *gin.Context, db *data.DB) {
+func ListUsers(c *gin.Context, db *data.DB) {
 	rows, err := db.Query(`SELECT usuarios.id, usuarios.nombre_usuario, usuarios.password, usuarios.correo, roles.name
 	FROM usuarios
 	INNER JOIN user_roles ON usuarios.id = user_roles.user_id
@@ -22,49 +23,49 @@ func ListarUsuarios(c *gin.Context, db *data.DB) {
 	}
 	defer rows.Close()
 
-	var usuarios []models.Usuario
+	var users []models.User
 	for rows.Next() {
-		var usuario models.Usuario
-		err = rows.Scan(&usuario.ID, &usuario.Nombre, &usuario.Password, &usuario.Correo, &usuario.Role)
+		var user models.User
+		err = rows.Scan(&user.ID, &user.Username, &user.Password, &user.Email, &user.Role)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("SCAN_FAILED", "Error al escanear los resultados."))
 			return
 		}
-		usuarios = append(usuarios, usuario)
+		users = append(users, user)
 	}
 
-	c.JSON(http.StatusOK, usuarios)
+	c.JSON(http.StatusOK, users)
 }
 
-func CrearUsuario(c *gin.Context, db *data.DB) {
-	var usuario models.Usuario
-	if err := c.ShouldBindJSON(&usuario); err != nil {
+func CreateUser(c *gin.Context, db *data.DB) {
+	var user models.User
+	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("JSON_BINDING_FAILED", "Error al procesar los datos del usuario."))
 		return
 	}
 
-	if err := checkUsernameEmail(db, usuario.Nombre, usuario.Correo); err != nil {
+	if err := handlers.CheckUsernameEmail(db, user.Username, user.Email); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(usuario.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("PASSWORD_HASHING_FAILED", "Error al hashear la contraseña."))
 		return
 	}
 
 	query := "INSERT INTO usuarios (nombre_usuario, password, correo) VALUES ($1, $2, $3) RETURNING id"
-	err = db.QueryRow(query, usuario.Nombre, hashedPassword, usuario.Correo).Scan(&usuario.ID)
+	err = db.QueryRow(query, user.Username, hashedPassword, user.Email).Scan(&user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("QUERY_FAILED", "Error al ejecutar la consulta."))
 		return
 	}
 
-	c.JSON(http.StatusCreated, usuario)
+	c.JSON(http.StatusCreated, user)
 }
 
-func ActualizarUsuario(c *gin.Context, db *data.DB) {
+func UpdateUser(c *gin.Context, db *data.DB) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -72,20 +73,20 @@ func ActualizarUsuario(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	var usuario models.Usuario
-	if err := c.ShouldBindJSON(&usuario); err != nil {
+	var user models.User
+	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("JSON_BINDING_FAILED", "Error al procesar los datos del usuario."))
 		return
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(usuario.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("PASSWORD_HASHING_FAILED", "Error al hashear la contraseña."))
 		return
 	}
 
 	query := "UPDATE usuarios SET nombre_usuario=$1, password=$2, correo=$3 WHERE id=$4"
-	result, err := db.Exec(query, &usuario.Nombre, hashedPassword, &usuario.Correo, id)
+	result, err := db.Exec(query, &user.Username, hashedPassword, &user.Email, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		return
@@ -102,7 +103,7 @@ func ActualizarUsuario(c *gin.Context, db *data.DB) {
 	c.JSON(http.StatusOK, gin.H{"message": "Los datos del usuario se han actualizado correctamente."})
 }
 
-func EliminarUsuario(c *gin.Context, db *data.DB) {
+func DeleteUser(c *gin.Context, db *data.DB) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {

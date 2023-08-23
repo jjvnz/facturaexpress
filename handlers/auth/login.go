@@ -21,7 +21,7 @@ func Login(c *gin.Context, db *data.DB, jwtKey []byte, expTimeStr string) {
 		return
 	}
 
-	user, err := verifyCredentials(db, loginData.Correo, loginData.Password)
+	user, err := verifyCredentials(db, loginData.Email, loginData.Password)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusUnauthorized, models.ErrorResponseInit("EMAIL_NOT_FOUND", "No se encontró ningún usuario con el correo electrónico que ingresaste"))
@@ -53,8 +53,8 @@ func Login(c *gin.Context, db *data.DB, jwtKey []byte, expTimeStr string) {
 }
 
 // verifyCredentials verifica el correo electrónico y la contraseña del usuario.
-func verifyCredentials(db *data.DB, correo string, password string) (models.Usuario, error) {
-	var user models.Usuario
+func verifyCredentials(db *data.DB, correo string, password string) (models.User, error) {
+	var user models.User
 	stmt, err := db.Prepare(`SELECT usuarios.id, usuarios.nombre_usuario, usuarios.password, roles.name
 	FROM usuarios
 	INNER JOIN user_roles ON usuarios.id = user_roles.user_id
@@ -65,7 +65,7 @@ func verifyCredentials(db *data.DB, correo string, password string) (models.Usua
 	}
 	defer stmt.Close()
 	row := stmt.QueryRow(correo)
-	err = row.Scan(&user.ID, &user.Nombre, &user.Password, &user.Role)
+	err = row.Scan(&user.ID, &user.Username, &user.Password, &user.Role)
 	if err == sql.ErrNoRows {
 		return user, err
 	} else if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) != nil {
@@ -75,7 +75,7 @@ func verifyCredentials(db *data.DB, correo string, password string) (models.Usua
 }
 
 // generateJWTToken genera un token JWT para el ID de usuario dado.
-func generateJWTToken(jwtKey []byte, usuarioID int64, role string, expTimeStr string) (string, error) {
+func generateJWTToken(jwtKey []byte, userID int64, role string, expTimeStr string) (string, error) {
 	expDuration := 24 * time.Hour // valor predeterminado de 24 horas si no se establece en la variable expTimeStr o si hay un error al analizarlo.
 	if d, _ := time.ParseDuration(expTimeStr); d > 0 {
 		expDuration = d
@@ -83,8 +83,8 @@ func generateJWTToken(jwtKey []byte, usuarioID int64, role string, expTimeStr st
 	expTime := time.Now().Add(expDuration)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &models.Claims{
-		UsuarioID: usuarioID,
-		Role:      role,
+		UserID: userID,
+		Role:   role,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expTime.Unix(),
 		},
