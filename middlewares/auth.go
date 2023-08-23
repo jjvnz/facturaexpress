@@ -66,7 +66,7 @@ func AuthMiddleware(c *gin.Context, db *data.DB, jwtKey []byte) {
 func RoleAuthMiddleware(c *gin.Context, db *data.DB, role string) {
 	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
 	claims := c.MustGet("claims").(*models.Claims)
-	userID := claims.UsuarioID
+	userID := claims.UserID
 
 	// Agregar una condición para permitir que el rol de ADMIN acceda a la ruta
 	if claims.Role == common.ADMIN {

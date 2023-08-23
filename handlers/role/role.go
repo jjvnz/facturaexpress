@@ -124,7 +124,7 @@ func ListRoles(c *gin.Context, db *data.DB) {
 	})
 }
 
-func ActualizarRol(c *gin.Context, db *data.DB) {
+func UpdateRole(c *gin.Context, db *data.DB) {
 	// Obtener el ID del usuario y el ID del nuevo rol de los parámetros de la solicitud
 	userID := c.Param("userID")
 	newRoleID := c.Param("newRoleID")

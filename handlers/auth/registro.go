@@ -12,13 +12,13 @@ import (
 
 // Register maneja el registro de usuarios.
 func Register(c *gin.Context, db *data.DB) {
-	var user models.Usuario
+	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("JSON_BINDING_FAILED", "Error al procesar los datos del usuario."))
 		return
 	}
 
-	if err := checkUsernameEmail(db, user.Nombre, user.Correo); err != nil {
+	if err := CheckUsernameEmail(db, user.Username, user.Email); err != nil {
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
@@ -29,7 +29,7 @@ func Register(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	userID, err := saveUser(db, user.Nombre, hashedPassword, user.Correo)
+	userID, err := saveUser(db, user.Username, hashedPassword, user.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err)
 		return
@@ -43,8 +43,8 @@ func Register(c *gin.Context, db *data.DB) {
 	c.JSON(http.StatusCreated, gin.H{"message": "Usuario registrado con éxito."})
 }
 
-// checkUsernameEmail verifica si el nombre de usuario o el correo electrónico ya están en uso.
-func checkUsernameEmail(db *data.DB, username string, email string) error {
+// CheckUsernameEmail verifica si el nombre de usuario o el correo electrónico ya están en uso.
+func CheckUsernameEmail(db *data.DB, username string, email string) error {
 	stmt, err := db.Prepare("SELECT COUNT(*) FROM usuarios WHERE nombre_usuario = $1 OR correo = $2")
 	if err != nil {
 		return models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta.")

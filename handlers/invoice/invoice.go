@@ -18,16 +18,16 @@ import (
 	"github.com/jung-kurt/gofpdf"
 )
 
-func unmarshalServicios(data []byte) ([]models.Servicio, error) {
-	var servicios []models.Servicio
-	err := json.Unmarshal(data, &servicios)
+func unmarshalServices(data []byte) ([]models.Service, error) {
+	var services []models.Service
+	err := json.Unmarshal(data, &services)
 	if err != nil {
 		return nil, err
 	}
-	return servicios, nil
+	return services, nil
 }
 
-func ListarFacturas(c *gin.Context, db *data.DB) {
+func ListInvoices(c *gin.Context, db *data.DB) {
 	// Obtener el rol del usuario del token JWT
 	claims := c.MustGet("claims").(*models.Claims)
 	rol := claims.Role
@@ -75,7 +75,7 @@ func ListarFacturas(c *gin.Context, db *data.DB) {
 			args = []interface{}{limit, offset}
 		} else {
 			query = `SELECT * FROM facturas WHERE usuario_id = $1 ORDER BY id ASC LIMIT $2 OFFSET $3`
-			args = []interface{}{claims.UsuarioID, limit, offset}
+			args = []interface{}{claims.UserID, limit, offset}
 		}
 	}
 	rows, err = db.Query(query, args...)
@@ -87,52 +87,53 @@ func ListarFacturas(c *gin.Context, db *data.DB) {
 	defer rows.Close()
 
 	// Procesar las filas y construir el arreglo de facturas
-	var facturas []models.Factura
+	var invoices []models.Invoice
 	for rows.Next() {
 		var (
-			id, usuarioID                     int
-			nombreEmpresa, nitEmpresa         string
-			fecha                             time.Time
-			servicios                         []byte
-			valorTotal                        float64
-			nombreOperador, tipoDocumento     string
-			documento, ciudadExpedicion       string
-			celular, numeroCuenta, tipoCuenta string
-			banco                             string
+			id, userID                                    int
+			companyName, companyTIN                       string
+			date                                          time.Time
+			services                                      []byte
+			totalValue                                    float64
+			operatorName, documentType                    string
+			document, documentIssuanceCity                string
+			cellphone, bankAccountNumber, bankAccountType string
+			bank                                          string
 		)
 
-		err := rows.Scan(&id, &nombreEmpresa, &nitEmpresa, &fecha, &servicios, &valorTotal, &nombreOperador, &tipoDocumento, &documento, &ciudadExpedicion, &celular, &numeroCuenta, &tipoCuenta, &banco, &usuarioID)
+		err := rows.Scan(&id, &companyName, &companyTIN, &date, &services, &totalValue, &operatorName, &documentType, &document, &documentIssuanceCity, &cellphone, &bankAccountNumber, &bankAccountType, &bank, &userID)
+
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("DATABASE_ERROR", "Ocurrió un error al leer los datos de la base de datos"))
 			return
 		}
 
-		serviciosDeserializados, err := unmarshalServicios(servicios)
+		servicesDeserialized, err := unmarshalServices(services)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponseInit("SERVICES_DESERIALIZATION_ERROR", "Error al deserializar servicios"))
 			c.Abort()
 			return
 		}
 
-		factura := models.Factura{
+		invoice := models.Invoice{
 			ID:         id,
-			Empresa:    models.Empresa{Nombre: nombreEmpresa, NIT: nitEmpresa},
-			Fecha:      fecha,
-			Servicios:  serviciosDeserializados,
-			ValorTotal: valorTotal,
-			Operador:   models.Operador{Nombre: nombreOperador, TipoDocumento: tipoDocumento, Documento: documento, CiudadExpedicionDocumento: ciudadExpedicion, Celular: celular, NumeroCuentaBancaria: numeroCuenta, TipoCuentaBancaria: tipoCuenta, Banco: banco},
-			UsuarioID:  int64(usuarioID),
+			Company:    models.Company{Name: companyName, TIN: companyTIN},
+			Date:       date,
+			Services:   servicesDeserialized,
+			TotalValue: totalValue,
+			Operator:   models.Operator{Name: operatorName, DocumentType: documentType, Document: document, DocumentIssuanceCity: documentIssuanceCity, Cellphone: cellphone, BankAccountNumber: bankAccountNumber, BankAccountType: bankAccountType, Bank: bank},
+			UserID:     int64(userID),
 		}
-		facturas = append(facturas, factura)
+		invoices = append(invoices, invoice)
 	}
 
 	// Verificar si se encontraron facturas y contar el total de facturas
-	switch len(facturas) {
+	switch len(invoices) {
 	case 0:
 		c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponseInit("NOT_FOUND", "La página solicitada no existe"))
 		c.Abort()
 	default:
-		var totalFacturas int
+		var totalInvoices int
 		if filterField != "" && filterValue != "" {
 			query = `SELECT COUNT(*) FROM facturas WHERE $1 = $2`
 			args = []interface{}{filterField, filterValue}
@@ -142,43 +143,44 @@ func ListarFacturas(c *gin.Context, db *data.DB) {
 				args = []interface{}{}
 			} else {
 				query = `SELECT COUNT(*) FROM facturas WHERE usuario_id = $1`
-				args = []interface{}{claims.UsuarioID}
+				args = []interface{}{claims.UserID}
 			}
 		}
-		err = db.QueryRow(query, args...).Scan(&totalFacturas)
+		err = db.QueryRow(query, args...).Scan(&totalInvoices)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al contar las facturas"))
 			c.Abort()
 			return
 		}
-		totalPages := int(math.Ceil(float64(totalFacturas) / float64(limit)))
+		totalPages := int(math.Ceil(float64(totalInvoices) / float64(limit)))
 		c.JSON(http.StatusOK, gin.H{
-			"facturas":    facturas,
+			"invoices":    invoices,
 			"total_pages": totalPages,
 			"page":        page,
 		})
 	}
+
 }
 
-func CrearFactura(c *gin.Context, db *data.DB) {
-	// Obtener el rol y el ID del usuario del token JWT
+func CreateInvoice(c *gin.Context, db *data.DB) {
+	// Obtener el rol y el ID de usuario del token JWT
 	claims := c.MustGet("claims").(*models.Claims)
-	rol := claims.Role
-	idUsuario := claims.UsuarioID
+	role := claims.Role
+	userID := claims.UserID
 
-	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
-	if !verificarRol(rol, []string{common.ADMIN, common.USER}) {
+	// Comprobar si el usuario tiene el rol necesario para acceder a la ruta
+	if !verifyRole(role, []string{common.ADMIN, common.USER}) {
 		c.JSON(http.StatusForbidden, models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página."))
 		return
 	}
 
-	var factura models.Factura
-	if err := c.BindJSON(&factura); err != nil {
+	var invoice models.Invoice
+	if err := c.BindJSON(&invoice); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("INVALID_DATA", "Datos inválidos. Verifica y vuelve a intentarlo."))
 		return
 	}
 
-	serviciosJSON, err := json.Marshal(factura.Servicios)
+	servicesJSON, err := json.Marshal(invoice.Services)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("SERVICES_MARSHAL_ERROR", "Error al codificar los servicios en formato JSON."))
 		return
@@ -186,20 +188,20 @@ func CrearFactura(c *gin.Context, db *data.DB) {
 
 	query := `INSERT INTO facturas (nombre_empresa, nit_empresa, fecha, servicios, valor_total, nombre_operador, tipo_documento_operador, documento_operador, ciudad_expedicion_documento_operador, celular_operador, numero_cuenta_bancaria_operador, tipo_cuenta_bancaria_operador, banco_operador, usuario_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,$14) RETURNING id`
 	err = db.QueryRow(query,
-		factura.Empresa.Nombre,
-		factura.Empresa.NIT,
-		factura.Fecha,
-		serviciosJSON,
-		factura.ValorTotal,
-		factura.Operador.Nombre,
-		factura.Operador.TipoDocumento,
-		factura.Operador.Documento,
-		factura.Operador.CiudadExpedicionDocumento,
-		factura.Operador.Celular,
-		factura.Operador.NumeroCuentaBancaria,
-		factura.Operador.TipoCuentaBancaria,
-		factura.Operador.Banco,
-		idUsuario).Scan(&factura.ID)
+		invoice.Company.Name,
+		invoice.Company.TIN,
+		invoice.Date,
+		servicesJSON,
+		invoice.TotalValue,
+		invoice.Operator.Name,
+		invoice.Operator.DocumentType,
+		invoice.Operator.Document,
+		invoice.Operator.DocumentIssuanceCity,
+		invoice.Operator.Cellphone,
+		invoice.Operator.BankAccountNumber,
+		invoice.Operator.BankAccountType,
+		invoice.Operator.Bank,
+		userID).Scan(&invoice.ID)
 
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al procesar las facturas"))
@@ -207,83 +209,83 @@ func CrearFactura(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	// Actualizar el objeto factura con el idUsuario correcto
-	factura.UsuarioID = idUsuario
+	// Actualiza el objeto de factura con el ID de usuario correcto
+	invoice.UserID = userID
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Factura creada correctamente", "factura": factura})
+	c.JSON(http.StatusCreated, gin.H{"message": "Factura creada correctamente", "invoice": invoice})
 }
 
-// obtenerUsuarioIDFactura consulta la base de datos para obtener el ID del usuario asociado a la factura especificada
-func obtenerUsuarioIDFactura(db *data.DB, idFactura string) (int64, error) {
-	var idUsuarioFactura int64
-	err := db.QueryRow("SELECT usuario_id FROM facturas WHERE id = $1", idFactura).Scan(&idUsuarioFactura)
+// getUserIDFromInvoice consulta la base de datos para obtener el ID del usuario asociado a la factura especificada
+func getUserIDFromInvoice(db *data.DB, invoiceID string) (int64, error) {
+	var invoiceUserID int64
+	err := db.QueryRow("SELECT usuario_id FROM facturas WHERE id = $1", invoiceID).Scan(&invoiceUserID)
 	if err != nil {
 		return 0, err
 	}
-	return idUsuarioFactura, nil
+	return invoiceUserID, nil
 }
 
-func ActualizarFactura(c *gin.Context, db *data.DB) {
-	// Obtener el rol y el ID del usuario del token JWT
+func UpdateInvoice(c *gin.Context, db *data.DB) {
+	// Get the role and user ID from the JWT token
 	claims := c.MustGet("claims").(*models.Claims)
-	rol := claims.Role
-	idUsuario := claims.UsuarioID
-	idFactura := c.Param("id")
+	role := claims.Role
+	userID := claims.UserID
+	invoiceID := c.Param("id")
 
-	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
-	if !verificarRol(rol, []string{common.ADMIN, common.USER}) {
+	// Check if the user has the necessary role to access the route
+	if !verifyRole(role, []string{common.ADMIN, common.USER}) {
 		c.JSON(http.StatusForbidden, models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página."))
 		c.Abort()
 		return
 	}
 
-	// Agregar una condición para permitir que el rol de common.ADMIN actualice cualquier factura
-	if rol != common.ADMIN {
-		// Verificar si el usuario está intentando actualizar su propia factura
-		idUsuarioFactura, err := obtenerUsuarioIDFactura(db, idFactura)
+	// Add a condition to allow common.ADMIN role to update any invoice
+	if role != common.ADMIN {
+		// Check if the user is trying to update their own invoice
+		invoiceUserID, err := getUserIDFromInvoice(db, invoiceID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al obtener el ID del usuario de la factura."))
 			c.Abort()
 			return
 		}
-		if idUsuario != idUsuarioFactura {
+		if userID != invoiceUserID {
 			c.JSON(http.StatusForbidden, models.ErrorResponseInit("NO_PERMISSION", "Solo puedes actualizar tus propias facturas."))
 			c.Abort()
 			return
 		}
 	}
 
-	var factura models.Factura
-	err := c.BindJSON(&factura)
+	var invoice models.Invoice
+	err := c.BindJSON(&invoice)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("INVALID_DATA", "Datos inválidos. Verifica y vuelve a intentarlo."))
 		c.Abort()
 		return
 	}
 
-	// Validar los datos de entrada
-	if factura.Empresa.Nombre == "" || factura.Empresa.NIT == "" || factura.Fecha.IsZero() || len(factura.Servicios) == 0 {
+	// Validate input data
+	if invoice.Company.Name == "" || invoice.Company.TIN == "" || invoice.Date.IsZero() || len(invoice.Services) == 0 {
 		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("MISSING_FIELDS", "Faltan campos requeridos."))
 		c.Abort()
 		return
 	}
 
-	serviciosJSON, err := json.Marshal(factura.Servicios)
+	servicesJSON, err := json.Marshal(invoice.Services)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("SERVICIOS_MARSHAL_ERROR", "Error al codificar los servicios en formato JSON."))
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("SERVICES_MARSHAL_ERROR", "Error al codificar los servicios en formato JSON."))
 		c.Abort()
 		return
 	}
 
-	// Verificar si el usuario existe
-	var existeUsuario bool
-	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM usuarios WHERE id = $1)", idUsuario).Scan(&existeUsuario)
+	// Check if the user exists
+	var userExists bool
+	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM usuarios WHERE id = $1)", userID).Scan(&userExists)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al verificar si el usuario existe."))
 		c.Abort()
 		return
 	}
-	if !existeUsuario {
+	if !userExists {
 		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("USER_NOT_FOUND", "El usuario especificado no existe."))
 		c.Abort()
 		return
@@ -299,7 +301,7 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
 			numero_cuenta_bancaria_operador = $11,
 			tipo_cuenta_bancaria_operador = $12,
 			banco_operador = $13 WHERE id = $14`
-	result, err := db.Exec(query, factura.Empresa.Nombre, factura.Empresa.NIT, factura.Fecha, serviciosJSON, factura.ValorTotal, factura.Operador.Nombre, factura.Operador.TipoDocumento, factura.Operador.Documento, factura.Operador.CiudadExpedicionDocumento, factura.Operador.Celular, factura.Operador.NumeroCuentaBancaria, factura.Operador.TipoCuentaBancaria, factura.Operador.Banco, idFactura)
+	result, err := db.Exec(query, invoice.Company.Name, invoice.Company.TIN, invoice.Date, servicesJSON, invoice.TotalValue, invoice.Operator.Name, invoice.Operator.DocumentType, invoice.Operator.Document, invoice.Operator.DocumentIssuanceCity, invoice.Operator.Cellphone, invoice.Operator.BankAccountNumber, invoice.Operator.BankAccountType, invoice.Operator.Bank, invoiceID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al actualizar la factura en la base de datos."))
 		c.Abort()
@@ -313,21 +315,21 @@ func ActualizarFactura(c *gin.Context, db *data.DB) {
 	}
 }
 
-func EliminarFactura(c *gin.Context, db *data.DB) {
-	// Obtener el rol y usuario_id del usuario del token JWT
+func DeleteInvoice(c *gin.Context, db *data.DB) {
+	// Get the role and user ID from the JWT token
 	claims := c.MustGet("claims").(*models.Claims)
-	rol := claims.Role
-	idUsuario := claims.UsuarioID
+	role := claims.Role
+	userID := claims.UserID
 
-	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
-	rolesPermitidos := []string{common.ADMIN, common.USER}
-	if !verificarRol(rol, rolesPermitidos) {
+	// Check if the user has the necessary role to access the route
+	allowedRoles := []string{common.ADMIN, common.USER}
+	if !verifyRole(role, allowedRoles) {
 		c.JSON(http.StatusForbidden, models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página."))
 		c.Abort()
 		return
 	}
 
-	// Validar el valor del parámetro id
+	// Validate the value of the id parameter
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -342,17 +344,17 @@ func EliminarFactura(c *gin.Context, db *data.DB) {
 	}
 
 	var query string
-	if rol == common.ADMIN {
+	if role == common.ADMIN {
 		query = `DELETE FROM facturas WHERE id = $1`
 	} else {
 		query = `DELETE FROM facturas WHERE id = $1 AND usuario_id = $2`
 	}
 
 	var result sql.Result
-	if rol == common.ADMIN {
+	if role == common.ADMIN {
 		result, err = db.Exec(query, id)
 	} else {
-		result, err = db.Exec(query, id, idUsuario)
+		result, err = db.Exec(query, id, userID)
 	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("SQL_ERROR", "Error al ejecutar la consulta SQL"))
@@ -368,57 +370,57 @@ func EliminarFactura(c *gin.Context, db *data.DB) {
 	}
 }
 
-func obtenerFactura(c *gin.Context, db *data.DB) (models.Factura, error) {
-	// Obtener el ID de la factura a partir del parámetro de la URL
+func getInvoice(c *gin.Context, db *data.DB) (models.Invoice, error) {
+	// Get the invoice ID from the URL parameter
 	id := c.Param("id")
 
-	// Consultar la base de datos para obtener la información de la factura
+	// Query the database to get the invoice information
 	query := `SELECT * FROM facturas WHERE id = $1`
 	row := db.QueryRow(query, id)
 
-	// Decodificar la fila en una estructura Factura
-	var factura models.Factura
-	var serviciosJSON []byte
-	err := row.Scan(&factura.ID, &factura.Empresa.Nombre, &factura.Empresa.NIT, &factura.Fecha, &serviciosJSON, &factura.ValorTotal, &factura.Operador.Nombre, &factura.Operador.TipoDocumento, &factura.Operador.Documento, &factura.Operador.CiudadExpedicionDocumento, &factura.Operador.Celular, &factura.Operador.NumeroCuentaBancaria, &factura.Operador.TipoCuentaBancaria, &factura.Operador.Banco, &factura.UsuarioID)
+	// Decode the row into an Invoice struct
+	var invoice models.Invoice
+	var servicesJSON []byte
+	err := row.Scan(&invoice.ID, &invoice.Company.Name, &invoice.Company.TIN, &invoice.Date, &servicesJSON, &invoice.TotalValue, &invoice.Operator.Name, &invoice.Operator.DocumentType, &invoice.Operator.Document, &invoice.Operator.DocumentIssuanceCity, &invoice.Operator.Cellphone, &invoice.Operator.BankAccountNumber, &invoice.Operator.BankAccountType, &invoice.Operator.Bank, &invoice.UserID)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			//lint:ignore ST1005 Razón para ignorar la advertencia
-			return factura, fmt.Errorf("No se encontró la factura con el ID especificado.")
+			//lint:ignore ST1005 Reason for ignoring warning
+			return invoice, fmt.Errorf("No se encontró la factura con el ID especificado.")
 
 		} else {
-			return factura, err
+			return invoice, err
 		}
 	}
 
-	// Decodificar los datos JSON de los servicios en una slice de estructuras Servicio
-	err = json.Unmarshal(serviciosJSON, &factura.Servicios)
+	// Decode the JSON data of the services into a slice of Service structs
+	err = json.Unmarshal(servicesJSON, &invoice.Services)
 	if err != nil {
-		return factura, err
+		return invoice, err
 	}
 
-	return factura, nil
+	return invoice, nil
 }
 
-func GenerarPDF(c *gin.Context, db *data.DB) {
-	// Obtener el ID de la factura a partir del parámetro de la URL
+func GeneratePDF(c *gin.Context, db *data.DB) {
+	// Get the invoice ID from the URL parameter
 	id := c.Param("id")
 
-	// Obtener el rol del usuario del token JWT
+	// Get the user role from the JWT token
 	claims := c.MustGet("claims").(*models.Claims)
-	rol := claims.Role
-	idUsuario := claims.UsuarioID
+	role := claims.Role
+	userID := claims.UserID
 
-	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
-	rolesPermitidos := []string{common.ADMIN, common.USER}
-	if !verificarRol(rol, rolesPermitidos) {
+	// Check if the user has the necessary role to access the route
+	allowedRoles := []string{common.ADMIN, common.USER}
+	if !verifyRole(role, allowedRoles) {
 		c.JSON(http.StatusForbidden, models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para acceder a esta página."))
 		c.Abort()
 		return
 	}
 
-	// Obtener la factura
-	factura, err := obtenerFactura(c, db)
+	// Get the invoice
+	invoice, err := getInvoice(c, db)
 	if err != nil {
 		if strings.Contains(err.Error(), "ID especificado.") {
 			c.JSON(http.StatusNotFound, models.ErrorResponseInit("INVOICE_NOT_FOUND", err.Error()))
@@ -429,97 +431,97 @@ func GenerarPDF(c *gin.Context, db *data.DB) {
 		}
 	}
 
-	// Verificar si el usuario es el dueño de la factura o si tiene el rol de ADMIN
-	if factura.UsuarioID != idUsuario && rol != common.ADMIN {
+	// Check if the user is the owner of the invoice or has the ADMIN role
+	if invoice.UserID != userID && role != common.ADMIN {
 		c.JSON(http.StatusForbidden, models.ErrorResponseInit("NO_PERMISSION", "No tienes permiso para generar el archivo PDF de esta factura."))
 		c.Abort()
 		return
 	}
 
-	// Crear un nuevo documento PDF
+	// Create a new PDF document
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.AddUTF8Font("DejaVuSans", "", "./font/DejaVuSans.ttf")
 	pdf.AddPage()
 
-	// Agregar información de la factura
+	// Add invoice information
 	pdf.SetFont("DejaVuSans", "", 12)
-	pdf.Cell(40, 10, "Cartagena   "+factura.Fecha.Format("02-01-2006"))
+	pdf.Cell(40, 10, "Cartagena   "+invoice.Date.Format("02-01-2006"))
 	pdf.Ln(10)
-	pdf.Cell(40, 10, factura.Empresa.Nombre)
+	pdf.Cell(40, 10, invoice.Company.Name)
 	pdf.Ln(10)
-	pdf.Cell(40, 10, "Nit: "+factura.Empresa.NIT)
+	pdf.Cell(40, 10, "Nit: "+invoice.Company.TIN)
 	pdf.Ln(20)
 
-	// Agregar información del cliente
+	// Add client information
 	pdf.SetFont("DejaVuSans", "", 12)
 	pdf.Cell(40, 10, "DEBE A:")
 	pdf.Ln(10)
-	pdf.Cell(40, 10, factura.Operador.Nombre)
+	pdf.Cell(40, 10, invoice.Operator.Name)
 	pdf.Ln(10)
-	pdf.Cell(40, 10, factura.Operador.TipoDocumento+": "+factura.Operador.Documento+" Expedida en "+factura.Operador.CiudadExpedicionDocumento)
+	pdf.Cell(40, 10, invoice.Operator.DocumentType+": "+invoice.Operator.Document+" Expedida en "+invoice.Operator.DocumentIssuanceCity)
 	pdf.Ln(20)
 
-	// Agregar valor total
+	// Add total value
 	pdf.SetFont("DejaVuSans", "", 12)
 	pdf.Cell(40, 10, "LA SUMA DE:")
 	pdf.Ln(10)
-	// Formatear el número con dos decimales
-	valorFormateado := strconv.FormatFloat(factura.ValorTotal, 'f', 2, 64)
+	// Format the number with two decimal places
+	formattedValue := strconv.FormatFloat(invoice.TotalValue, 'f', 2, 64)
 
-	// Separar la parte entera y la parte decimal del número
-	partes := strings.Split(valorFormateado, ".")
+	// Split the integer and decimal parts of the number
+	parts := strings.Split(formattedValue, ".")
 
-	// Agregar el separador de miles a la parte entera del número
-	for i := len(partes[0]) - 3; i > 0; i -= 3 {
-		partes[0] = partes[0][:i] + "." + partes[0][i:]
+	// Add thousands separator to the integer part of the number
+	for i := len(parts[0]) - 3; i > 0; i -= 3 {
+		parts[0] = parts[0][:i] + "." + parts[0][i:]
 	}
 
-	// Unir la parte entera y la parte decimal del número con una coma
-	valorFormateado = strings.Join(partes, ",")
+	// Join the integer and decimal parts of the number with a comma
+	formattedValue = strings.Join(parts, ",")
 
-	// Agregar el símbolo de peso y el texto "pesos"
-	texto := fmt.Sprintf("$ %s pesos.", valorFormateado)
+	// Add peso symbol and "pesos" text
+	text := fmt.Sprintf("$ %s pesos.", formattedValue)
 
-	// Utilizar el texto formateado en la celda del PDF
-	pdf.Cell(40, 10, texto)
+	// Use formatted text in PDF cell
+	pdf.Cell(40, 10, text)
 	pdf.Ln(20)
 
-	// Agregar concepto
+	// Add concept
 	pdf.SetFont("DejaVuSans", "", 12)
 	pdf.Cell(40, 10, "Por concepto de:")
 	pdf.Ln(10)
-	for _, servicio := range factura.Servicios {
-		pdf.Cell(80, 10, servicio.Descripcion)
+	for _, service := range invoice.Services {
+		pdf.Cell(80, 10, service.Description)
 		pdf.Ln(10)
 	}
 	pdf.Ln(20)
 
-	// Agregar firma y datos de contacto
+	// Add signature and contact information
 	pdf.SetFont("DejaVuSans", "", 12)
 	pdf.Cell(40, 10, "Cordialmente")
 	pdf.Ln(20)
 	pdf.Cell(40, 10, "_____________________________________________")
 	pdf.Ln(20)
-	pdf.Cell(40, 10, factura.Operador.Nombre)
+	pdf.Cell(40, 10, invoice.Operator.Name)
 	pdf.Ln(10)
-	pdf.Cell(40, 10, factura.Operador.TipoDocumento+": "+factura.Operador.Documento)
+	pdf.Cell(40, 10, invoice.Operator.DocumentType+": "+invoice.Operator.Document)
 	pdf.Ln(10)
-	if factura.Operador.Celular != "" {
-		pdf.Cell(40, 10, "Cel: "+factura.Operador.Celular)
+	if invoice.Operator.Cellphone != "" {
+		pdf.Cell(40, 10, "Cel: "+invoice.Operator.Cellphone)
 	}
-	if factura.Operador.NumeroCuentaBancaria != "" {
-		tipoCuenta := ""
-		if factura.Operador.TipoCuentaBancaria != "" {
-			tipoCuenta = " " + factura.Operador.TipoCuentaBancaria
+	if invoice.Operator.BankAccountNumber != "" {
+		bankAccountType := ""
+		if invoice.Operator.BankAccountType != "" {
+			bankAccountType = " " + invoice.Operator.BankAccountType
 		}
-		banco := ""
-		if factura.Operador.Banco != "" {
-			banco = " " + factura.Operador.Banco
+		bank := ""
+		if invoice.Operator.Bank != "" {
+			bank = " " + invoice.Operator.Bank
 		}
-		pdf.Cell(40, 10, fmt.Sprintf("N° Cuenta: %s%s%s", factura.Operador.NumeroCuentaBancaria, tipoCuenta, banco))
+		pdf.Cell(40, 10, fmt.Sprintf("N° Cuenta: %s%s%s", invoice.Operator.BankAccountNumber, bankAccountType, bank))
 	}
 
-	// Guardar el PDF en un archivo temporal
+	// Save the PDF to a temporary file
 	tmpfile, err := os.CreateTemp("", fmt.Sprintf("factura-%s-*.pdf", id))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -533,17 +535,17 @@ func GenerarPDF(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	// Establecer el tipo de contenido y el nombre del archivo para la descarga
+	// Set the content type and file name for download
 	c.Header("Content-Type", "application/pdf")
 	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="factura-%s.pdf"`, id))
 
-	// Enviar el archivo PDF como respuesta
+	// Send the PDF file as a response
 	c.File(tmpfile.Name())
 }
 
-func verificarRol(rol string, rolesPermitidos []string) bool {
-	for _, rolPermitido := range rolesPermitidos {
-		if rol == rolPermitido {
+func verifyRole(role string, allowedRoles []string) bool {
+	for _, allowedRole := range allowedRoles {
+		if role == allowedRole {
 			return true
 		}
 	}
