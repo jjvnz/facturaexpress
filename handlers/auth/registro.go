@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"facturaexpress/common"
 	"facturaexpress/data"
 	"facturaexpress/models"
@@ -10,7 +11,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Register maneja el registro de usuarios.
 func Register(c *gin.Context, db *data.DB) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -19,6 +19,11 @@ func Register(c *gin.Context, db *data.DB) {
 	}
 
 	if err := CheckUsernameEmail(db, user.Username, user.Email); err != nil {
+		c.JSON(http.StatusBadRequest, err)
+		return
+	}
+
+	if err := CheckRoleExists(db, common.USER); err != nil {
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
@@ -58,6 +63,21 @@ func CheckUsernameEmail(db *data.DB, username string, email string) error {
 	return nil
 }
 
+// CheckRoleExists verifica si el rol especificado existe en la base de datos.
+func CheckRoleExists(db *data.DB, roleName string) error {
+	stmt, err := db.Prepare(`SELECT COUNT(*) FROM roles WHERE name=$1`)
+	if err != nil {
+		return models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta.")
+	}
+	defer stmt.Close()
+	row := stmt.QueryRow(roleName)
+	var count int
+	if err = row.Scan(&count); err != nil || count == 0 {
+		return models.ErrorResponseInit("ROLE_NOT_FOUND", "No se encontró el rol especificado.")
+	}
+	return nil
+}
+
 // saveUser guarda al usuario en la base de datos y devuelve su ID.
 func saveUser(db *data.DB, username string, hashedPassword []byte, email string) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO usuarios (nombre_usuario, password, correo) VALUES ($1, $2, $3) RETURNING id`)
@@ -82,6 +102,9 @@ func saveUserRole(db *data.DB, userID int64) error {
 	row := stmt.QueryRow(common.USER)
 	var roleID int64
 	if err = row.Scan(&roleID); err != nil {
+		if err == sql.ErrNoRows {
+			return models.ErrorResponseInit("ROLE_NOT_FOUND", "No se encontró el rol especificado.")
+		}
 		return models.ErrorResponseInit("ROLE_ID_RETRIEVAL_FAILED", "Error al obtener el ID del rol.")
 	}
 
