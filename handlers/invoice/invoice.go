@@ -27,7 +27,8 @@ func unmarshalServices(data []byte) ([]models.Service, error) {
 	return services, nil
 }
 
-func ListInvoices(c *gin.Context, db *data.DB) {
+func ListInvoices(c *gin.Context) {
+
 	// Obtener el rol del usuario del token JWT
 	claims := c.MustGet("claims").(*models.Claims)
 	rol := claims.Role
@@ -78,6 +79,9 @@ func ListInvoices(c *gin.Context, db *data.DB) {
 			args = []interface{}{claims.UserID, limit, offset}
 		}
 	}
+
+	db := data.GetInstance()
+
 	rows, err = db.Query(query, args...)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al obtener las facturas"))
@@ -162,7 +166,7 @@ func ListInvoices(c *gin.Context, db *data.DB) {
 
 }
 
-func CreateInvoice(c *gin.Context, db *data.DB) {
+func CreateInvoice(c *gin.Context) {
 	// Obtener el rol y el ID de usuario del token JWT
 	claims := c.MustGet("claims").(*models.Claims)
 	role := claims.Role
@@ -185,6 +189,8 @@ func CreateInvoice(c *gin.Context, db *data.DB) {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("SERVICES_MARSHAL_ERROR", "Error al codificar los servicios en formato JSON."))
 		return
 	}
+
+	db := data.GetInstance()
 
 	query := `INSERT INTO facturas (nombre_empresa, nit_empresa, fecha, servicios, valor_total, nombre_operador, tipo_documento_operador, documento_operador, ciudad_expedicion_documento_operador, celular_operador, numero_cuenta_bancaria_operador, tipo_cuenta_bancaria_operador, banco_operador, usuario_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,$14) RETURNING id`
 	err = db.QueryRow(query,
@@ -216,8 +222,9 @@ func CreateInvoice(c *gin.Context, db *data.DB) {
 }
 
 // getUserIDFromInvoice consulta la base de datos para obtener el ID del usuario asociado a la factura especificada
-func getUserIDFromInvoice(db *data.DB, invoiceID string) (int64, error) {
+func getUserIDFromInvoice(invoiceID string) (int64, error) {
 	var invoiceUserID int64
+	db := data.GetInstance()
 	err := db.QueryRow("SELECT usuario_id FROM facturas WHERE id = $1", invoiceID).Scan(&invoiceUserID)
 	if err != nil {
 		return 0, err
@@ -225,7 +232,7 @@ func getUserIDFromInvoice(db *data.DB, invoiceID string) (int64, error) {
 	return invoiceUserID, nil
 }
 
-func UpdateInvoice(c *gin.Context, db *data.DB) {
+func UpdateInvoice(c *gin.Context) {
 	// Get the role and user ID from the JWT token
 	claims := c.MustGet("claims").(*models.Claims)
 	role := claims.Role
@@ -242,7 +249,7 @@ func UpdateInvoice(c *gin.Context, db *data.DB) {
 	// Add a condition to allow common.ADMIN role to update any invoice
 	if role != common.ADMIN {
 		// Check if the user is trying to update their own invoice
-		invoiceUserID, err := getUserIDFromInvoice(db, invoiceID)
+		invoiceUserID, err := getUserIDFromInvoice(invoiceID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al obtener el ID del usuario de la factura."))
 			c.Abort()
@@ -279,6 +286,7 @@ func UpdateInvoice(c *gin.Context, db *data.DB) {
 
 	// Check if the user exists
 	var userExists bool
+	db := data.GetInstance()
 	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM usuarios WHERE id = $1)", userID).Scan(&userExists)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al verificar si el usuario existe."))
@@ -315,7 +323,7 @@ func UpdateInvoice(c *gin.Context, db *data.DB) {
 	}
 }
 
-func DeleteInvoice(c *gin.Context, db *data.DB) {
+func DeleteInvoice(c *gin.Context) {
 	// Get the role and user ID from the JWT token
 	claims := c.MustGet("claims").(*models.Claims)
 	role := claims.Role
@@ -351,6 +359,7 @@ func DeleteInvoice(c *gin.Context, db *data.DB) {
 	}
 
 	var result sql.Result
+	db := data.GetInstance()
 	if role == common.ADMIN {
 		result, err = db.Exec(query, id)
 	} else {
@@ -370,12 +379,13 @@ func DeleteInvoice(c *gin.Context, db *data.DB) {
 	}
 }
 
-func getInvoice(c *gin.Context, db *data.DB) (models.Invoice, error) {
+func getInvoice(c *gin.Context) (models.Invoice, error) {
 	// Get the invoice ID from the URL parameter
 	id := c.Param("id")
 
 	// Query the database to get the invoice information
 	query := `SELECT * FROM facturas WHERE id = $1`
+	db := data.GetInstance()
 	row := db.QueryRow(query, id)
 
 	// Decode the row into an Invoice struct
@@ -402,7 +412,7 @@ func getInvoice(c *gin.Context, db *data.DB) (models.Invoice, error) {
 	return invoice, nil
 }
 
-func GeneratePDF(c *gin.Context, db *data.DB) {
+func GeneratePDF(c *gin.Context) {
 	// Get the invoice ID from the URL parameter
 	id := c.Param("id")
 
@@ -420,7 +430,7 @@ func GeneratePDF(c *gin.Context, db *data.DB) {
 	}
 
 	// Get the invoice
-	invoice, err := getInvoice(c, db)
+	invoice, err := getInvoice(c)
 	if err != nil {
 		if strings.Contains(err.Error(), "ID especificado.") {
 			c.JSON(http.StatusNotFound, models.ErrorResponseInit("INVOICE_NOT_FOUND", err.Error()))

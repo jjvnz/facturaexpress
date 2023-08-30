@@ -9,11 +9,11 @@ import (
 )
 
 // En tu archivo handlers.go, agrega una nueva función para manejar solicitudes de logout
-func Logout(c *gin.Context, db *data.DB) {
-	/// En tu función Logout, después de obtener el token del encabezado Authorization:
+func Logout(c *gin.Context) {
 	tokenString := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
 
-	// Verificar si el token ya está en la lista negra
+	db := data.GetInstance()
+
 	var count int
 	err := db.QueryRow(`SELECT COUNT(*) FROM jwt_blacklist WHERE token = $1`, tokenString).Scan(&count)
 	if err != nil {
@@ -25,7 +25,6 @@ func Logout(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	// Agregar el token a la lista negra para revocarlo
 	stmt, err := db.Prepare(`INSERT INTO jwt_blacklist (token) VALUES ($1)`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al preparar la consulta"})
@@ -38,7 +37,6 @@ func Logout(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	// Devolver una respuesta al cliente indicando que la sesión ha sido cerrada con éxito
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Sesión cerrada con éxito",
 	})

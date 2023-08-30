@@ -10,8 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func AssignRole(c *gin.Context, db *data.DB) {
-	// Obtener el ID del usuario y el ID del rol de los parámetros de la solicitud
+func AssignRole(c *gin.Context) {
 	userID := c.Param("id")
 	newRoleID := c.Param("newRoleID")
 
@@ -19,7 +18,6 @@ func AssignRole(c *gin.Context, db *data.DB) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error en los paramentros de consulta"})
 	}
 
-	// Convertir los valores de userID y newRoleID a enteros
 	userIDInt, err := strconv.Atoi(userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "El ID del usuario debe ser un número entero válido"})
@@ -31,7 +29,8 @@ func AssignRole(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	// Verificar si el usuario y el rol existen en la base de datos
+	db := data.GetInstance()
+
 	var count int
 	stmt, err := db.Prepare(`SELECT COUNT(*) FROM usuarios WHERE id = $1`)
 	if err != nil {
@@ -64,7 +63,6 @@ func AssignRole(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	// Verificar si el usuario ya tiene asignado el rol especificado
 	stmt, err = db.Prepare(`SELECT COUNT(*) FROM user_roles WHERE user_id = $1 AND role_id = $2`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al preparar la consulta"})
@@ -81,7 +79,6 @@ func AssignRole(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	// Asignar el rol al usuario en la base de datos
 	stmt, err = db.Prepare(`INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al preparar la consulta"})
@@ -94,14 +91,14 @@ func AssignRole(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	// Devolver una respuesta al cliente
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Rol asignado con éxito",
 	})
 }
 
-func ListRoles(c *gin.Context, db *data.DB) {
-	// Obtener la lista de roles de la base de datos
+func ListRoles(c *gin.Context) {
+	db := data.GetInstance()
+
 	rows, err := db.Query(`SELECT id, name FROM roles`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al obtener la lista de roles"})
@@ -118,18 +115,15 @@ func ListRoles(c *gin.Context, db *data.DB) {
 		roles = append(roles, role)
 	}
 
-	// Devolver una respuesta al cliente con la lista de roles
 	c.JSON(http.StatusOK, gin.H{
 		"roles": roles,
 	})
 }
 
-func UpdateRole(c *gin.Context, db *data.DB) {
-	// Obtener el ID del usuario y el ID del nuevo rol de los parámetros de la solicitud
+func UpdateRole(c *gin.Context) {
 	userID := c.Param("id")
 	roleID := c.Param("roleID")
 
-	// Convertir los valores de userID y roleID a enteros
 	userIDInt, err := strconv.Atoi(userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("INVALID_USER_ID", "El ID del usuario debe ser un número entero válido"))
@@ -141,7 +135,8 @@ func UpdateRole(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	// Verificar si el usuario y el nuevo rol existen en la base de datos
+	db := data.GetInstance()
+
 	var count int
 	stmt, err := db.Prepare(`SELECT COUNT(*) FROM usuarios WHERE id = $1`)
 	if err != nil {
@@ -174,7 +169,6 @@ func UpdateRole(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	// Verificar si el usuario ya tiene el rol especificado
 	stmt, err = db.Prepare(`SELECT COUNT(*) FROM user_roles WHERE user_id = $1 AND role_id = $2`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta"))
@@ -191,7 +185,6 @@ func UpdateRole(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	// Actualizar el rol del usuario en la base de datos
 	stmt, err = db.Prepare(`UPDATE user_roles SET role_id = $1 WHERE user_id = $2`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta"))
@@ -204,7 +197,6 @@ func UpdateRole(c *gin.Context, db *data.DB) {
 		return
 	}
 
-	// Obtener el token JWT del usuario cuyo rol ha cambiado
 	stmt, err = db.Prepare(`SELECT jwt_token FROM usuarios WHERE id = $1`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit("QUERY_PREPARATION_FAILED", "Error al preparar la consulta"))
@@ -231,7 +223,6 @@ func UpdateRole(c *gin.Context, db *data.DB) {
 		}
 	}
 
-	// Devolver una respuesta al cliente
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Rol actualizado con éxito",
 	})
