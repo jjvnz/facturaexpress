@@ -12,8 +12,7 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-func AuthMiddleware(c *gin.Context, db *data.DB, jwtKey []byte) {
-	// Extrae el token JWT del encabezado Authorization
+func AuthMiddleware(c *gin.Context, jwtKey []byte) {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponseInit("INVALID_AUTH_HEADER", "Falta encabezado Authorization o prefijo Bearer"))
@@ -21,10 +20,8 @@ func AuthMiddleware(c *gin.Context, db *data.DB, jwtKey []byte) {
 		return
 	}
 
-	// Elimina el prefijo Bearer y el espacio del encabezado Authorization
 	jwtToken := strings.TrimPrefix(authHeader, "Bearer ")
 
-	// Verifica la firma y valida los claims del token JWT
 	claims := &models.Claims{}
 	token, err := jwt.ParseWithClaims(jwtToken, claims, func(token *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
@@ -35,8 +32,8 @@ func AuthMiddleware(c *gin.Context, db *data.DB, jwtKey []byte) {
 		return
 	}
 
-	// En tu middleware AuthMiddleware, después de verificar la firma y validar los claims del token JWT:
 	tokenString := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
+	db := data.GetInstance()
 	stmt, err := db.Prepare(`SELECT COUNT(*) FROM jwt_blacklist WHERE token = $1`)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponseInit("DB_ERROR", "Error al preparar la consulta"))
@@ -57,22 +54,21 @@ func AuthMiddleware(c *gin.Context, db *data.DB, jwtKey []byte) {
 		return
 	}
 
-	// Establece los claims en el contexto de Gin
 	c.Set("claims", claims)
 
 	c.Next()
 }
 
-func RoleAuthMiddleware(c *gin.Context, db *data.DB, role string) {
-	// Verificar si el usuario tiene el rol necesario para acceder a la ruta
+func RoleAuthMiddleware(c *gin.Context, role string) {
 	claims := c.MustGet("claims").(*models.Claims)
 	userID := claims.UserID
 
-	// Agregar una condición para permitir que el rol de ADMIN acceda a la ruta
 	if claims.Role == common.ADMIN {
 		c.Next()
 		return
 	}
+
+	db := data.GetInstance()
 
 	var userRole models.UserRole
 	stmt, err := db.Prepare(`SELECT user_id, role_id FROM user_roles JOIN roles ON user_roles.role_id = roles.id WHERE user_roles.user_id = $1 AND roles.name = $2`)

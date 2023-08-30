@@ -12,7 +12,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func ListUsers(c *gin.Context, db *data.DB) {
+func ListUsers(c *gin.Context) {
+	db := data.GetInstance()
+
 	rows, err := db.Query(`SELECT usuarios.id, usuarios.nombre_usuario, usuarios.password, usuarios.correo, roles.name
 	FROM usuarios
 	INNER JOIN user_roles ON usuarios.id = user_roles.user_id
@@ -37,12 +39,14 @@ func ListUsers(c *gin.Context, db *data.DB) {
 	c.JSON(http.StatusOK, users)
 }
 
-func CreateUser(c *gin.Context, db *data.DB) {
+func CreateUser(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("JSON_BINDING_FAILED", "Error al procesar los datos del usuario."))
 		return
 	}
+
+	db := data.GetInstance()
 
 	if err := handlers.CheckUsernameEmail(db, user.Username, user.Email); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -65,7 +69,7 @@ func CreateUser(c *gin.Context, db *data.DB) {
 	c.JSON(http.StatusCreated, user)
 }
 
-func UpdateUser(c *gin.Context, db *data.DB) {
+func UpdateUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -85,6 +89,8 @@ func UpdateUser(c *gin.Context, db *data.DB) {
 		return
 	}
 
+	db := data.GetInstance()
+
 	query := "UPDATE usuarios SET nombre_usuario=$1, password=$2, correo=$3 WHERE id=$4"
 	result, err := db.Exec(query, &user.Username, hashedPassword, &user.Email, id)
 	if err != nil {
@@ -103,13 +109,15 @@ func UpdateUser(c *gin.Context, db *data.DB) {
 	c.JSON(http.StatusOK, gin.H{"message": "Los datos del usuario se han actualizado correctamente."})
 }
 
-func DeleteUser(c *gin.Context, db *data.DB) {
+func DeleteUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("INVALID_ID", "ID inválido"))
 		return
 	}
+
+	db := data.GetInstance()
 
 	query := "DELETE FROM usuarios WHERE id = $1"
 	result, err := db.Exec(query, id)

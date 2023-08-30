@@ -13,13 +13,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Login maneja el inicio de sesión del usuario y la generación de tokens.
-func Login(c *gin.Context, db *data.DB, jwtKey []byte, expTimeStr string) {
+func Login(c *gin.Context, jwtKey []byte, expTimeStr string) {
 	var loginData models.LoginData
 	if err := c.ShouldBindJSON(&loginData); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponseInit("BAD_REQUEST", "Error al leer los datos de inicio de sesión."))
 		return
 	}
+
+	db := data.GetInstance()
 
 	user, err := verifyCredentials(db, loginData.Email, loginData.Password)
 	if err != nil {
@@ -52,7 +53,6 @@ func Login(c *gin.Context, db *data.DB, jwtKey []byte, expTimeStr string) {
 	c.JSON(http.StatusOK, gin.H{"message": "Inicio de sesión exitoso", "token": tokenString})
 }
 
-// verifyCredentials verifica el correo electrónico y la contraseña del usuario.
 func verifyCredentials(db *data.DB, correo string, password string) (models.User, error) {
 	var user models.User
 	stmt, err := db.Prepare(`SELECT usuarios.id, usuarios.nombre_usuario, usuarios.password, roles.name
@@ -74,7 +74,6 @@ func verifyCredentials(db *data.DB, correo string, password string) (models.User
 	return user, nil
 }
 
-// generateJWTToken genera un token JWT para el ID de usuario dado.
 func generateJWTToken(jwtKey []byte, userID int64, role string, expTimeStr string) (string, error) {
 	expDuration := 24 * time.Hour // valor predeterminado de 24 horas si no se establece en la variable expTimeStr o si hay un error al analizarlo.
 	if d, _ := time.ParseDuration(expTimeStr); d > 0 {
