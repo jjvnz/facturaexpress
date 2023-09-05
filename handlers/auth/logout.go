@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"facturaexpress/common"
 	"facturaexpress/data"
+	"facturaexpress/models"
 	"net/http"
 	"strings"
 
@@ -17,23 +19,23 @@ func Logout(c *gin.Context) {
 	var count int
 	err := db.QueryRow(`SELECT COUNT(*) FROM jwt_blacklist WHERE token = $1`, tokenString).Scan(&count)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al verificar si el token está en la lista negra"})
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit(common.ErrDBError, "Error al verificar si el token está en la lista negra"))
 		return
 	}
 	if count > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "El token ya está en la lista negra"})
+		c.JSON(http.StatusBadRequest, models.ErrorResponseInit(common.ErrTokenAlreadyBlacklisted, "El token ya está en la lista negra"))
 		return
 	}
 
 	stmt, err := db.Prepare(`INSERT INTO jwt_blacklist (token) VALUES ($1)`)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al preparar la consulta"})
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit(common.ErrDBError, "Error al preparar la consulta"))
 		return
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(tokenString)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al agregar el token a la lista negra"})
+		c.JSON(http.StatusInternalServerError, models.ErrorResponseInit(common.ErrDBError, "Error al agregar el token a la lista negra"))
 		return
 	}
 

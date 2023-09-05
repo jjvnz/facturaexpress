@@ -68,6 +68,10 @@ func NewRouter(jwtKey []byte, expTimeStr string) *gin.Engine {
 				userHandler.DeleteUser(c)
 			})
 
+			authorized.GET("/user/profile", func(c *gin.Context) {
+				userHandler.GetUserInfo(c)
+			})
+
 			authorized.GET("/invoices", func(c *gin.Context) {
 				invoiceHandler.ListInvoices(c)
 			})

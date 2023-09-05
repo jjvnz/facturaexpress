@@ -24,7 +24,9 @@ func main() {
 	jwtKey := []byte(config.JWT.SecretKey)
 	expTimeStr := config.JWT.ExpTime
 
+	// Crea un nuevo enrutador Gin y configura las rutas y los controladores de ruta
 	router := routes.NewRouter(jwtKey, expTimeStr)
 
+	// Inicia el servidor Gin y escucha las solicitudes entrantes
 	router.Run("localhost:8000")
 }

@@ -3,6 +3,7 @@ package data
 import (
 	"database/sql"
 	"encoding/json"
+	interfaceDB "facturaexpress/interfaces"
 	"facturaexpress/models"
 	"fmt"
 	"os"
@@ -11,14 +12,17 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type DB struct {
+type PostgresAdapter struct {
 	conn *sql.DB
 }
 
-var instance *DB
+// implemeto la interfaz Database
+var _ interfaceDB.Database = &PostgresAdapter{}
+
+var instance *PostgresAdapter
 var once sync.Once
 
-func GetInstance() *DB {
+func GetInstance() *PostgresAdapter {
 	once.Do(func() {
 		configFile, err := os.ReadFile("config.json")
 		if err != nil {
@@ -50,12 +54,12 @@ func GetInstance() *DB {
 			panic(err)
 		}
 
-		instance = &DB{conn: db}
+		instance = &PostgresAdapter{conn: db}
 	})
 	return instance
 }
 
-func (db *DB) Prepare(query string) (*sql.Stmt, error) {
+func (db *PostgresAdapter) Prepare(query string) (*sql.Stmt, error) {
 	stmt, err := db.conn.Prepare(query)
 	if err != nil {
 		return nil, fmt.Errorf("error al preparar la consulta: %v", err)
@@ -63,7 +67,7 @@ func (db *DB) Prepare(query string) (*sql.Stmt, error) {
 	return stmt, nil
 }
 
-func (db *DB) Query(query string, args ...interface{}) (*sql.Rows, error) {
+func (db *PostgresAdapter) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error al ejecutar la consulta: %v", err)
@@ -71,7 +75,7 @@ func (db *DB) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	return rows, nil
 }
 
-func (db *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
+func (db *PostgresAdapter) Exec(query string, args ...interface{}) (sql.Result, error) {
 	result, err := db.conn.Exec(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error al ejecutar la consulta: %v", err)
@@ -79,10 +83,10 @@ func (db *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
 	return result, nil
 }
 
-func (db *DB) QueryRow(query string, args ...interface{}) *sql.Row {
+func (db *PostgresAdapter) QueryRow(query string, args ...interface{}) *sql.Row {
 	return db.conn.QueryRow(query, args...)
 }
 
-func (db *DB) Close() error {
+func (db *PostgresAdapter) Close() error {
 	return db.conn.Close()
 }

@@ -52,20 +52,25 @@ facturaexpress/
 ├── handlers/
 │   ├── auth/
 │   │       ├── login.go
-│   │       ├── login_test.go
 │   │       ├── logout.go
-│   │       ├── logout_test.go
-│   │       ├── register.go
-│   │       └── register_test.go
+│   │       └── registro.go
 │   ├── invoice/
-│   │       ├── invoice.go
-│   │       └── invoice_test.go
+│   │       ├── createinvoice.go
+│   │       ├── deleteinvoice.go
+│   │       ├── generatepdf.go
+│   │       ├── getinvoice.go
+│   │       ├── listinvoices.go
+│   │       └── updateinvoice.go
 │   ├── role/
-│   │       ├── role.go
-│   │       └── role_test.go
+│   │       ├── assignrole.go
+│   │       ├── listroles.go
+│   │       └── updaterole.go
 │   ├── user/
-│   │       ├── user.go
-│   │       └── user_test.go
+│   │       ├── createuser.go
+│   │       ├── deleteuser.go
+│   │       ├── getuserinfo.go
+│   │       ├── listusers.go
+│   │       └── updateuser.go
 ├── middlewares/
 │   └── auth.go
 ├── models/
@@ -77,14 +82,26 @@ facturaexpress/
 │   ├── role.go
 │   └── user.go
 ├── routes/
-│   └── router.go
-├── .gitignore
-├── config.json
-├── go.mod
-├── go.sum
-├── main.go 
-└── README.md
-
+|    └── router.go 
+├── helpers/
+|    ├── checkroleexists.go 
+|    ├── checkusernameemail.go 
+|    ├── generatejwttoken.go 
+|    ├── getuseridfrominvoice.go 
+|    ├── saveuser.go 
+|    ├── saveuserrole.go 
+|    ├── unmarshalservices.go 
+|    ├── verifycredentials.go 
+|    ├── verifyrole.go 
+|    └── verifytoken.go 
+├── interfaces/
+|    └── database.go 
+├── .gitignore 
+├── README.md 
+├── config.json 
+├── go.mod 
+├── go.sum 
+└── main.go 
 ```
 - La carpeta `common` contiene el archivo `constant.go` en él se definen constantes requeridas en el proyecto como "ADMIN" y "USER" etc.
 - La carpeta `data` contiene el archivo `db.go` que interactúa con la base de datos.
@@ -93,6 +110,8 @@ facturaexpress/
 - La carpeta `middlewares` contiene el middleware de autenticación.
 - La carpeta `models` contiene las definiciones de modelos de datos para las reclamaciones, errores, facturas, roles y usuarios.
 - La carpeta `routes` contiene el archivo `router.go` que define las rutas de la API.
+- La carpeta `helpers` contiene funciones auxiliares para verificar roles, nombres de usuario y correos electrónicos, generar tokens JWT, guardar usuarios y roles, verificar credenciales y más.
+- La carpeta `interfaces` contiene el archivo database. go que define la interfaz para interactuar con la base de datos.
 - Los archivos `.gitignore`, `config.json`, `go.mod`, `go.sum`, `main.go` y `README.md` son archivos de configuración y código principal del proyecto.
 
 ## Esquema de base de datos
@@ -150,3 +169,53 @@ Tambien implementa un sistema de manejo de roles y permisos para controlar el ac
 ## Autenticación JWT
 
 Se utiliza tokens JWT (JSON Web Tokens) para autenticar a los usuarios y proteger las rutas de la API. Cuando un usuario inicia sesión, se genera un token JWT que contiene información sobre el usuario y se envía al cliente. El cliente debe incluir este token antecedido por el prefijo 'Bearer '  y un espacio en las solicitudes posteriores para acceder a las rutas protegidas.
+
+
+## Códigos de error
+
+
+Los códigos de error se definen en el archivo common/constant.go y se utilizan en todo el proyecto para mejorar la legibilidad y la gestión de los códigos de error. Aquí están las constantes de error que se utilizan actualmente:
+
+```go
+const (
+	ErrInvalidAuthHeader          = "INVALID_AUTH_HEADER"
+	ErrInvalidToken               = "INVALID_TOKEN"
+	ErrDBError                    = "DB_ERROR"
+	ErrInsuficientRole            = "INSUFFICIENT_ROLE"
+	ErrBadRequest                 = "BAD_REQUEST"
+	ErrEmailNotFound              = "EMAIL_NOT_FOUND"
+	ErrIncorrectPassword          = "INCORRECT_PASSWORD"
+	ErrJWTGenerationError         = "JWT_GENERATION_ERROR"
+	ErrJWTStorageError            = "JWT_STORAGE_ERROR"
+	ErrTokenAlreadyBlacklisted    = "TOKEN_ALREADY_BLACKLISTED"
+	ErrPasswordHashingFailed      = "PASSWORD_HASHING_FAILED"
+	ErrJSONBindingFailed          = "JSON_BINDING_FAILED"
+	ErrNoPermission               = "NO_PERMISSION"
+	ErrInvalidData                = "INVALID_DATA"
+	ErrServicesMarshalError       = "SERVICES_MARSHAL_ERROR"
+	ErrServicesUnMarshalError     = "SERVICES_UNMARSHAL_ERROR"
+	ErrInvalidID                  = "INVALID_ID"
+	ErrInvoiceNotFound            = "INVOICE_NOT_FOUND"
+	ErrNotFound                   = "NOT_FOUND"
+	ErrInvalidPageParam           = "INVALID_PAGE_PARAM"
+	ErrInvalidLimitParam          = "INVALID_LIMIT_PARAM"
+	ErrLimitTooHigh               = "LIMIT_TOO_HIGH"
+	ErrMissingFields              = "MISSING_FIELDS"
+	ErrUserNotFound               = "USER_NOT_FOUND"
+	ErrInvalidUserID              = "INVALID_USER_ID"
+	ErrInvalidRoleID              = "INVALID_ROLE_ID"
+	ErrQueryPreparationFailed     = "QUERY_PREPARATION_FAILED"
+	ErrUserVerificationFailed     = "USER_VERIFICATION_FAILED"
+	ErrRoleVerificationFailed     = "ROLE_VERIFICATION_FAILED"
+	ErrRoleNotFound               = "ROLE_NOT_FOUND"
+	ErrUserRoleVerificationFailed = "USER_ROLE_VERIFICATION_FAILED"
+	ErrUserAlreadyHasRole         = "USER_ALREADY_HAS_ROLE"
+	ErrUserRoleUpdateFailed       = "USER_ROLE_UPDATE_FAILED"
+	ErrJWTTokenRetrievalFailed    = "JWT_TOKEN_RETRIEVAL_FAILED"
+	ErrJWTTokenBlacklistingFailed = "JWT_TOKEN_BLACKLISTING_FAILED"
+	ErrQueryFailed                = "QUERY_FAILED"
+	ErrErrorGeneratingToken       = "ERROR_GENERATING_TOKEN"
+	ErrDatabaseSaveFailed         = "DATABASE_SAVE_FAILED"
+	ErrRoleIDRetrievalFailed      = "ROLE_ID_RETRIEVAL_FAILED"
+)
+```
