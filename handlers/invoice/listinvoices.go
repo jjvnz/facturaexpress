@@ -10,7 +10,6 @@ import (
 	"math"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -83,7 +82,7 @@ func ListInvoices(c *gin.Context) {
 		var (
 			id, userID                                    int
 			companyName, companyTIN                       string
-			date                                          time.Time
+			date                                          string
 			services                                      []byte
 			totalValue                                    float64
 			operatorName, documentType                    string
@@ -109,7 +108,7 @@ func ListInvoices(c *gin.Context) {
 		invoice := models.Invoice{
 			ID:         id,
 			Company:    models.Company{Name: companyName, TIN: companyTIN},
-			Date:       date,
+			Date:       helpers.FormatDateInSpanish(date),
 			Services:   servicesDeserialized,
 			TotalValue: totalValue,
 			Operator:   models.Operator{Name: operatorName, DocumentType: documentType, Document: document, DocumentIssuanceCity: documentIssuanceCity, Cellphone: cellphone, BankAccountNumber: bankAccountNumber, BankAccountType: bankAccountType, Bank: bank},

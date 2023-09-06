@@ -86,6 +86,7 @@ facturaexpress/
 ├── helpers/
 |    ├── checkroleexists.go 
 |    ├── checkusernameemail.go 
+|    ├── formatdate.go
 |    ├── generatejwttoken.go 
 |    ├── getuseridfrominvoice.go 
 |    ├── saveuser.go 
@@ -123,7 +124,7 @@ CREATE TABLE facturas (
     id SERIAL PRIMARY KEY,
     empresa_nombre TEXT NOT NULL,
     empresa_nit TEXT NOT NULL,
-    fecha TIMESTAMP NOT NULL,
+    fecha DATE NOT NULL,
     servicios JSONB NOT NULL,
     valor_total NUMERIC NOT NULL,
     operador_nombre TEXT NOT NULL,

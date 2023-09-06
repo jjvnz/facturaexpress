@@ -1,13 +1,9 @@
 package models
 
-import (
-	"time"
-)
-
 type Invoice struct {
 	ID         int       `json:"id"`
 	Company    Company   `json:"empresa"`
-	Date       time.Time `json:"fecha"`
+	Date       string    `json:"fecha"`
 	Services   []Service `json:"servicios"`
 	TotalValue float64   `json:"valor_total"`
 	Operator   Operator  `json:"operador"`

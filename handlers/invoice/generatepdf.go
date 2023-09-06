@@ -57,7 +57,7 @@ func GeneratePDF(c *gin.Context) {
 
 	// Add invoice information
 	pdf.SetFont("DejaVuSans", "", 12)
-	pdf.Cell(40, 10, "Cartagena   "+invoice.Date.Format("02-01-2006"))
+	pdf.Cell(40, 10, "Cartagena "+helpers.FormatDateInSpanish(invoice.Date))
 	pdf.Ln(10)
 	pdf.Cell(40, 10, invoice.Company.Name)
 	pdf.Ln(10)

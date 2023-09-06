@@ -50,7 +50,7 @@ func UpdateInvoice(c *gin.Context) {
 	}
 
 	// Validate input data
-	if invoice.Company.Name == "" || invoice.Company.TIN == "" || invoice.Date.IsZero() || len(invoice.Services) == 0 {
+	if invoice.Company.Name == "" || invoice.Company.TIN == "" || invoice.Date == "" || len(invoice.Services) == 0 {
 		c.JSON(http.StatusBadRequest, models.ErrorResponseInit(common.ErrMissingFields, "Faltan campos requeridos."))
 		c.Abort()
 		return
