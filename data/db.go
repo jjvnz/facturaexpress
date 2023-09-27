@@ -2,13 +2,14 @@ package data
 
 import (
 	"database/sql"
-	"encoding/json"
 	interfaceDB "facturaexpress/interfaces"
-	"facturaexpress/models"
 	"fmt"
+	"log"
 	"os"
+	"strconv"
 	"sync"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -24,22 +25,19 @@ var once sync.Once
 
 func GetInstance() *PostgresAdapter {
 	once.Do(func() {
-		configFile, err := os.ReadFile("config.json")
+		err := godotenv.Load(".env")
 		if err != nil {
-			panic(fmt.Errorf("error al cargar el archivo de configuración: %v", err))
+			log.Fatalf("Error loading .env file")
 		}
 
-		var config models.DBConfig
-		err = json.Unmarshal(configFile, &config)
+		host := os.Getenv("DB_HOST")
+		port, err := strconv.Atoi(os.Getenv("DB_PORT"))
 		if err != nil {
-			panic(fmt.Errorf("error al leer el archivo de configuración: %v", err))
+			panic("Error: DB_PORT must be an integer")
 		}
-
-		host := config.DB.Host
-		port := config.DB.Port
-		user := config.DB.User
-		password := config.DB.Password
-		dbname := config.DB.DBName
+		user := os.Getenv("DB_USER")
+		password := os.Getenv("DB_PASSWORD")
+		dbname := os.Getenv("DB_NAME")
 
 		psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 			host, port, user, password, dbname)
