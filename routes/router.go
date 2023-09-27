@@ -25,77 +25,77 @@ func NewRouter(jwtKey []byte, expTimeStr string) *gin.Engine {
 
 	v1 := router.Group("/v1")
 	{
-		v1.POST("/register", func(c *gin.Context) {
-			authHandler.Register(c)
+		v1.POST("/register", func(context *gin.Context) {
+			authHandler.Register(context)
 		})
 
-		v1.POST("/login", func(c *gin.Context) {
-			authHandler.Login(c, jwtKey, expTimeStr)
+		v1.POST("/login", func(context *gin.Context) {
+			authHandler.Login(context, jwtKey, expTimeStr)
 		})
 
 		// Routes protected with AuthMiddleware middleware
 		authorized := v1.Group("/")
-		authorized.Use(func(c *gin.Context) {
-			middleware.AuthMiddleware(c, jwtKey)
+		authorized.Use(func(context *gin.Context) {
+			middleware.AuthMiddleware(context, jwtKey)
 		})
 		{
 			adminRoutes := authorized.Group("/")
-			adminRoutes.Use(func(c *gin.Context) {
-				middleware.RoleAuthMiddleware(c, common.ADMIN)
+			adminRoutes.Use(func(context *gin.Context) {
+				middleware.RoleAuthMiddleware(context, common.ADMIN)
 			})
 
-			adminRoutes.PUT("/users/:id/new-role/:newRoleID", func(c *gin.Context) {
-				roleHandler.AssignRole(c)
+			adminRoutes.PUT("/users/:id/new-role/:newRoleID", func(context *gin.Context) {
+				roleHandler.AssignRole(context)
 			})
-			adminRoutes.PUT("/users/:id/roles/:roleID", func(c *gin.Context) {
-				roleHandler.UpdateRole(c)
-			})
-
-			adminRoutes.GET("/roles", func(c *gin.Context) {
-				roleHandler.ListRoles(c)
+			adminRoutes.PUT("/users/:id/roles/:roleID", func(context *gin.Context) {
+				roleHandler.UpdateRole(context)
 			})
 
-			adminRoutes.GET("/users", func(c *gin.Context) {
-				userHandler.ListUsers(c)
-			})
-			adminRoutes.POST("/users", func(c *gin.Context) {
-				userHandler.CreateUser(c)
-			})
-			adminRoutes.PUT("/users/:id", func(c *gin.Context) {
-				userHandler.UpdateUser(c)
-			})
-			adminRoutes.DELETE("/users/:id", func(c *gin.Context) {
-				userHandler.DeleteUser(c)
+			adminRoutes.GET("/roles", func(context *gin.Context) {
+				roleHandler.ListRoles(context)
 			})
 
-			authorized.GET("/user/profile", func(c *gin.Context) {
-				userHandler.GetUserInfo(c)
+			adminRoutes.GET("/users", func(context *gin.Context) {
+				userHandler.ListUsers(context)
+			})
+			adminRoutes.POST("/users", func(context *gin.Context) {
+				userHandler.CreateUser(context)
+			})
+			adminRoutes.PUT("/users/:id", func(context *gin.Context) {
+				userHandler.UpdateUser(context)
+			})
+			adminRoutes.DELETE("/users/:id", func(context *gin.Context) {
+				userHandler.DeleteUser(context)
 			})
 
-			authorized.GET("/invoices", func(c *gin.Context) {
-				invoiceHandler.ListInvoices(c)
+			authorized.GET("/user/profile", func(context *gin.Context) {
+				userHandler.GetUserInfo(context)
 			})
 
-			authorized.POST("/invoices", func(c *gin.Context) {
-				invoiceHandler.CreateInvoice(c)
+			authorized.GET("/invoices", func(context *gin.Context) {
+				invoiceHandler.ListInvoices(context)
 			})
 
-			authorized.PUT("/invoices/:id", func(c *gin.Context) {
-				invoiceHandler.UpdateInvoice(c)
+			authorized.POST("/invoices", func(context *gin.Context) {
+				invoiceHandler.CreateInvoice(context)
 			})
 
-			authorized.DELETE("/invoices/:id", func(c *gin.Context) {
-				invoiceHandler.DeleteInvoice(c)
+			authorized.PUT("/invoices/:id", func(context *gin.Context) {
+				invoiceHandler.UpdateInvoice(context)
+			})
+
+			authorized.DELETE("/invoices/:id", func(context *gin.Context) {
+				invoiceHandler.DeleteInvoice(context)
 			})
 
 			// route to generate PDFs
-			authorized.GET("/invoices/:id/pdf", func(c *gin.Context) {
-				invoiceHandler.GeneratePDF(c)
+			authorized.GET("/invoices/:id/pdf", func(context *gin.Context) {
+				invoiceHandler.GeneratePDF(context)
 			})
 
 			// route to handle logout requests
-			authorized.POST("/logout", func(c *gin.Context) {
-				authHandler.Logout(c)
+			authorized.POST("/logout", func(context *gin.Context) {
+				authHandler.Logout(context)
 			})
 		}
 	}
