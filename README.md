@@ -16,24 +16,19 @@ FACTURAEXPRESS es una API escrita en Go que utiliza el marco GIN y la base de da
 
 ## Configuración
 
-Crea un archivo `config.json` en el directorio raíz del proyecto y agrega las siguientes variables:
+Crea un archivo `.env` en el directorio raíz del proyecto y añade las siguientes variables:
 
-```json
-{
-    "db": {
-        "host": "Tu host de base de datos",
-        "port": "Tu puerto de base de datos",
-        "user": "Tu usuario de base de datos",
-        "password": "Tu contraseña de base de datos",
-        "dbname": "El nombre de tu base de datos"
-    },
-    "jwt": {
-        "secret_key": "Tu clave secreta para firmar tokens JWT",
-        "exp_time": "El tiempo de expiración para los tokens JWT (en segundos)"
-    }
-}
+```bash
+DB_HOST=facturaexpress_facturaexpress_db_1
+DB_PORT=5432
+DB_USER=tu_usuario
+DB_PASSWORD=tu_contraseña
+DB_NAME=nombre_de_tu_base_de_datos
+SECRET_KEY=tu_llave_secreta
+EXP_TIME=15m
+PGADMIN_EMAIL=tu_email@ejemplo.com
+PGADMIN_PASSWORD=tu_contraseña_pgadmin
 ```
-
 Asegúrate de reemplazar los valores con tus propios valores.
 
 ## Estructura del proyecto
@@ -96,10 +91,11 @@ facturaexpress/
 |    ├── verifyrole.go 
 |    └── verifytoken.go 
 ├── interfaces/
-|    └── database.go 
+|    └── database.go
 ├── .gitignore 
+├── docker-compose.yml 
+├── Dockerfile
 ├── README.md 
-├── config.json 
 ├── go.mod 
 ├── go.sum 
 └── main.go 
@@ -115,48 +111,14 @@ facturaexpress/
 - La carpeta `interfaces` contiene el archivo database. go que define la interfaz para interactuar con la base de datos.
 - Los archivos `.gitignore`, `config.json`, `go.mod`, `go.sum`, `main.go` y `README.md` son archivos de configuración y código principal del proyecto.
 
-## Esquema de base de datos
-
-Aquí el esquema de base de datos para una tabla llamada `facturas`:
-
-```sql
-CREATE TABLE facturas (
-    id SERIAL PRIMARY KEY,
-    empresa_nombre TEXT NOT NULL,
-    empresa_nit TEXT NOT NULL,
-    fecha DATE NOT NULL,
-    servicios JSONB NOT NULL,
-    valor_total NUMERIC NOT NULL,
-    operador_nombre TEXT NOT NULL,
-    operador_tipo_documento TEXT NOT NULL,
-    operador_documento TEXT NOT NULL,
-    operador_ciudad_expedicion_documento TEXT NOT NULL,
-    operador_celular TEXT NOT NULL,
-    operador_numero_cuenta_bancaria TEXT NOT NULL,
-    operador_tipo_cuenta_bancaria TEXT NOT NULL,
-    operador_banco TEXT NOT NULL,
-    usuario_id INTEGER NOT NULL
-);
-```
-
-Este esquema incluye columnas para los campos en las estructuras `Factura`, `Empresa` y `Operador`. El campo `Servicios` se almacena como una columna JSONB, lo que le permite almacenar una matriz de objetos `Servicio` en una sola fila. Se ha agregado la columna `usuario_id` para almacenar el ID del usuario asociado con cada factura.
-
-También puede crear una nueva tabla llamada `usuarios` para almacenar datos de usuario. Aquí el esquema para la tabla `usuarios`:
-
-```sql
-CREATE TABLE usuarios (
-    id SERIAL PRIMARY KEY,
-    nombre_usuario TEXT NOT NULL,
-    password TEXT NOT NULL,
-    correo TEXT NOT NULL
-);
-```
-
-Este esquema incluye columnas para los campos en la estructura `Usuario`.
-
 ## Ejecución
 
-Para ejecutar la aplicación, navega hasta el directorio del proyecto y ejecuta el comando `go run main.go`. Esto iniciará el servidor en el puerto especificado (por defecto es el puerto 8080).
+Para iniciar la aplicación, ejecuta los siguientes comandos en la terminal:
+```shell
+docker-compose build
+docker-compose up
+```
+Esto iniciará tu aplicación y la base de datos en contenedores Docker. Tu aplicación estará disponible en localhost:8000.
 
 ## Uso
 
