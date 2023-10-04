@@ -28,6 +28,8 @@ SECRET_KEY=tu_llave_secreta
 EXP_TIME=15m
 PGADMIN_EMAIL=tu_email@ejemplo.com
 PGADMIN_PASSWORD=tu_contraseña_pgadmin
+SERVER_ADDRESS=tu_direcion_servidor
+SERVER_PORT=8000
 ```
 Asegúrate de reemplazar los valores con tus propios valores.
 
@@ -115,6 +117,7 @@ facturaexpress/
 
 Para iniciar la aplicación, ejecuta los siguientes comandos en la terminal:
 ```shell
+systemctl status docker
 docker-compose build
 docker-compose up
 ```

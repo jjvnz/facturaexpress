@@ -21,5 +21,7 @@ func main() {
 	router := routes.NewRouter(jwtKey, expTimeStr)
 
 	// Inicia el servidor Gin y escucha las solicitudes entrantes
-	router.Run("0.0.0.0:8000")
+	addr := os.Getenv("SERVER_ADDRESS")
+	port := os.Getenv("SERVER_PORT")
+	router.Run(addr + ":" + port)
 }
