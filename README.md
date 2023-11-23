@@ -123,6 +123,39 @@ docker-compose up
 ```
 Esto iniciará tu aplicación y la base de datos en contenedores Docker. Tu aplicación estará disponible en localhost:8000.
 
+## Esquema de base de datos
+Aquí el esquema de base de datos para una tabla llamada `facturas`:
+```sql
+CREATE TABLE facturas (
+    id SERIAL PRIMARY KEY,
+    empresa_nombre TEXT NOT NULL,
+    empresa_nit TEXT NOT NULL,
+    fecha TIMESTAMP NOT NULL,
+    servicios JSONB NOT NULL,
+    valor_total NUMERIC NOT NULL,
+    operador_nombre TEXT NOT NULL,
+    operador_tipo_documento TEXT NOT NULL,
+    operador_documento TEXT NOT NULL,
+    operador_ciudad_expedicion_documento TEXT NOT NULL,
+    operador_celular TEXT NOT NULL,
+    operador_numero_cuenta_bancaria TEXT NOT NULL,
+    operador_tipo_cuenta_bancaria TEXT NOT NULL,
+    operador_banco TEXT NOT NULL,
+    usuario_id INTEGER NOT NULL
+);
+```
+Este esquema incluye columnas para los campos en las estructuras `Factura`, `Empresa` y `Operador`. El campo `Servicios` se almacena como una columna JSONB, lo que le permite almacenar una matriz de objetos `Servicio` en una sola fila. Se ha agregado la columna `usuario_id` para almacenar el ID del usuario asociado con cada factura.
+También puede crear una nueva tabla llamada `usuarios` para almacenar datos de usuario. Aquí el esquema para la tabla `usuarios`:
+```sql
+CREATE TABLE usuarios (
+    id SERIAL PRIMARY KEY,
+    nombre_usuario TEXT NOT NULL,
+    password TEXT NOT NULL,
+    correo TEXT NOT NULL
+);
+```
+Este esquema incluye columnas para los campos en la estructura `Usuario`.
+
 ## Uso
 
 Una vez que el servidor esté en ejecución, puedes utilizar un cliente HTTP como Postman o cURL para enviar solicitudes a la API. Consulta la [Documentación de Postman](https://documenter.getpostman.com/view/23764700/2s9Xy5LAAk) de la API para obtener más información sobre los puntos finales disponibles y cómo utilizarlos.
