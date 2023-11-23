@@ -31,15 +31,14 @@ PGADMIN_PASSWORD=tu_contraseña_pgadmin
 SERVER_ADDRESS=tu_direcion_servidor
 SERVER_PORT=8000
 ```
+
 Asegúrate de reemplazar los valores con tus propios valores.
 
 ## Estructura del proyecto
 
 La estructura escojida para el proyecto es la siguiente:
 
-
-```
-facturaexpress/
+```facturaexpress/
 ├── common/
 │       └── constant.go
 ├── data/
@@ -102,6 +101,7 @@ facturaexpress/
 ├── go.sum 
 └── main.go 
 ```
+
 - La carpeta `common` contiene el archivo `constant.go` en él se definen constantes requeridas en el proyecto como "ADMIN" y "USER" etc.
 - La carpeta `data` contiene el archivo `db.go` que interactúa con la base de datos.
 - La carpeta `font` contiene el archivo de fuente `DejaVuSans.ttf`.
@@ -116,15 +116,19 @@ facturaexpress/
 ## Ejecución
 
 Para iniciar la aplicación, ejecuta los siguientes comandos en la terminal:
+
 ```shell
 systemctl status docker
 docker-compose build
 docker-compose up
 ```
+
 Esto iniciará tu aplicación y la base de datos en contenedores Docker. Tu aplicación estará disponible en localhost:8000.
 
 ## Esquema de base de datos
+
 Aquí el esquema de base de datos para una tabla llamada `facturas`:
+
 ```sql
 CREATE TABLE facturas (
     id SERIAL PRIMARY KEY,
@@ -144,8 +148,10 @@ CREATE TABLE facturas (
     usuario_id INTEGER NOT NULL
 );
 ```
+
 Este esquema incluye columnas para los campos en las estructuras `Factura`, `Empresa` y `Operador`. El campo `Servicios` se almacena como una columna JSONB, lo que le permite almacenar una matriz de objetos `Servicio` en una sola fila. Se ha agregado la columna `usuario_id` para almacenar el ID del usuario asociado con cada factura.
 También puede crear una nueva tabla llamada `usuarios` para almacenar datos de usuario. Aquí el esquema para la tabla `usuarios`:
+
 ```sql
 CREATE TABLE usuarios (
     id SERIAL PRIMARY KEY,
@@ -154,12 +160,12 @@ CREATE TABLE usuarios (
     correo TEXT NOT NULL
 );
 ```
+
 Este esquema incluye columnas para los campos en la estructura `Usuario`.
 
 ## Uso
 
 Una vez que el servidor esté en ejecución, puedes utilizar un cliente HTTP como Postman o cURL para enviar solicitudes a la API. Consulta la [Documentación de Postman](https://documenter.getpostman.com/view/23764700/2s9Xy5LAAk) de la API para obtener más información sobre los puntos finales disponibles y cómo utilizarlos.
-
 
 ## Manejo de roles y permisos
 
@@ -169,52 +175,50 @@ Tambien implementa un sistema de manejo de roles y permisos para controlar el ac
 
 Se utiliza tokens JWT (JSON Web Tokens) para autenticar a los usuarios y proteger las rutas de la API. Cuando un usuario inicia sesión, se genera un token JWT que contiene información sobre el usuario y se envía al cliente. El cliente debe incluir este token antecedido por el prefijo 'Bearer '  y un espacio en las solicitudes posteriores para acceder a las rutas protegidas.
 
-
 ## Códigos de error
-
 
 Los códigos de error se definen en el archivo common/constant.go y se utilizan en todo el proyecto para mejorar la legibilidad y la gestión de los códigos de error. Aquí están las constantes de error que se utilizan actualmente:
 
 ```go
 const (
-	ErrInvalidAuthHeader          = "INVALID_AUTH_HEADER"
-	ErrInvalidToken               = "INVALID_TOKEN"
-	ErrDBError                    = "DB_ERROR"
-	ErrInsuficientRole            = "INSUFFICIENT_ROLE"
-	ErrBadRequest                 = "BAD_REQUEST"
-	ErrEmailNotFound              = "EMAIL_NOT_FOUND"
-	ErrIncorrectPassword          = "INCORRECT_PASSWORD"
-	ErrJWTGenerationError         = "JWT_GENERATION_ERROR"
-	ErrJWTStorageError            = "JWT_STORAGE_ERROR"
-	ErrTokenAlreadyBlacklisted    = "TOKEN_ALREADY_BLACKLISTED"
-	ErrPasswordHashingFailed      = "PASSWORD_HASHING_FAILED"
-	ErrJSONBindingFailed          = "JSON_BINDING_FAILED"
-	ErrNoPermission               = "NO_PERMISSION"
-	ErrInvalidData                = "INVALID_DATA"
-	ErrServicesMarshalError       = "SERVICES_MARSHAL_ERROR"
-	ErrServicesUnMarshalError     = "SERVICES_UNMARSHAL_ERROR"
-	ErrInvalidID                  = "INVALID_ID"
-	ErrInvoiceNotFound            = "INVOICE_NOT_FOUND"
-	ErrNotFound                   = "NOT_FOUND"
-	ErrInvalidPageParam           = "INVALID_PAGE_PARAM"
-	ErrInvalidLimitParam          = "INVALID_LIMIT_PARAM"
-	ErrLimitTooHigh               = "LIMIT_TOO_HIGH"
-	ErrMissingFields              = "MISSING_FIELDS"
-	ErrUserNotFound               = "USER_NOT_FOUND"
-	ErrInvalidUserID              = "INVALID_USER_ID"
-	ErrInvalidRoleID              = "INVALID_ROLE_ID"
-	ErrQueryPreparationFailed     = "QUERY_PREPARATION_FAILED"
-	ErrUserVerificationFailed     = "USER_VERIFICATION_FAILED"
-	ErrRoleVerificationFailed     = "ROLE_VERIFICATION_FAILED"
-	ErrRoleNotFound               = "ROLE_NOT_FOUND"
-	ErrUserRoleVerificationFailed = "USER_ROLE_VERIFICATION_FAILED"
-	ErrUserAlreadyHasRole         = "USER_ALREADY_HAS_ROLE"
-	ErrUserRoleUpdateFailed       = "USER_ROLE_UPDATE_FAILED"
-	ErrJWTTokenRetrievalFailed    = "JWT_TOKEN_RETRIEVAL_FAILED"
-	ErrJWTTokenBlacklistingFailed = "JWT_TOKEN_BLACKLISTING_FAILED"
-	ErrQueryFailed                = "QUERY_FAILED"
-	ErrErrorGeneratingToken       = "ERROR_GENERATING_TOKEN"
-	ErrDatabaseSaveFailed         = "DATABASE_SAVE_FAILED"
-	ErrRoleIDRetrievalFailed      = "ROLE_ID_RETRIEVAL_FAILED"
+ ErrInvalidAuthHeader          = "INVALID_AUTH_HEADER"
+ ErrInvalidToken               = "INVALID_TOKEN"
+ ErrDBError                    = "DB_ERROR"
+ ErrInsuficientRole            = "INSUFFICIENT_ROLE"
+ ErrBadRequest                 = "BAD_REQUEST"
+ ErrEmailNotFound              = "EMAIL_NOT_FOUND"
+ ErrIncorrectPassword          = "INCORRECT_PASSWORD"
+ ErrJWTGenerationError         = "JWT_GENERATION_ERROR"
+ ErrJWTStorageError            = "JWT_STORAGE_ERROR"
+ ErrTokenAlreadyBlacklisted    = "TOKEN_ALREADY_BLACKLISTED"
+ ErrPasswordHashingFailed      = "PASSWORD_HASHING_FAILED"
+ ErrJSONBindingFailed          = "JSON_BINDING_FAILED"
+ ErrNoPermission               = "NO_PERMISSION"
+ ErrInvalidData                = "INVALID_DATA"
+ ErrServicesMarshalError       = "SERVICES_MARSHAL_ERROR"
+ ErrServicesUnMarshalError     = "SERVICES_UNMARSHAL_ERROR"
+ ErrInvalidID                  = "INVALID_ID"
+ ErrInvoiceNotFound            = "INVOICE_NOT_FOUND"
+ ErrNotFound                   = "NOT_FOUND"
+ ErrInvalidPageParam           = "INVALID_PAGE_PARAM"
+ ErrInvalidLimitParam          = "INVALID_LIMIT_PARAM"
+ ErrLimitTooHigh               = "LIMIT_TOO_HIGH"
+ ErrMissingFields              = "MISSING_FIELDS"
+ ErrUserNotFound               = "USER_NOT_FOUND"
+ ErrInvalidUserID              = "INVALID_USER_ID"
+ ErrInvalidRoleID              = "INVALID_ROLE_ID"
+ ErrQueryPreparationFailed     = "QUERY_PREPARATION_FAILED"
+ ErrUserVerificationFailed     = "USER_VERIFICATION_FAILED"
+ ErrRoleVerificationFailed     = "ROLE_VERIFICATION_FAILED"
+ ErrRoleNotFound               = "ROLE_NOT_FOUND"
+ ErrUserRoleVerificationFailed = "USER_ROLE_VERIFICATION_FAILED"
+ ErrUserAlreadyHasRole         = "USER_ALREADY_HAS_ROLE"
+ ErrUserRoleUpdateFailed       = "USER_ROLE_UPDATE_FAILED"
+ ErrJWTTokenRetrievalFailed    = "JWT_TOKEN_RETRIEVAL_FAILED"
+ ErrJWTTokenBlacklistingFailed = "JWT_TOKEN_BLACKLISTING_FAILED"
+ ErrQueryFailed                = "QUERY_FAILED"
+ ErrErrorGeneratingToken       = "ERROR_GENERATING_TOKEN"
+ ErrDatabaseSaveFailed         = "DATABASE_SAVE_FAILED"
+ ErrRoleIDRetrievalFailed      = "ROLE_ID_RETRIEVAL_FAILED"
 )
 ```
